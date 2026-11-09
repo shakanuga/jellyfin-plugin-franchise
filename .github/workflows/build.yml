@@ -8,14 +8,12 @@ jobs:
   build:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         include:
           - jellyfin: "10.11"
             tfm: net9.0
             sdk: "9.0.x"
-          - jellyfin: "10.10"
-            tfm: net8.0
-            sdk: "8.0.x"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -25,7 +23,7 @@ jobs:
         run: |
           VERSION=$(grep -oP '(?<=<AssemblyVersion>)[^<]+' Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj)
           dotnet publish Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj \
-            -c Release -o build -p:TargetFramework=${{ matrix.tfm }} -p:JellyfinVersion="${{ matrix.jellyfin }}.*"
+            -c Release -o build -p:PluginTargetFramework=${{ matrix.tfm }} -p:JellyfinVersion="${{ matrix.jellyfin }}.*"
           OUT="FranchiseCollections_${VERSION}"
           mkdir -p "$OUT"
           cp build/Jellyfin.Plugin.FranchiseCollections.dll "$OUT/"

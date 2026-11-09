@@ -570,7 +570,7 @@ public class FranchiseSyncService
             return configured;
         }
 
-        var first = _userManager.Users.FirstOrDefault();
+        var first = _userManager.GetUsers().FirstOrDefault();
         return first?.Id ?? Guid.Empty;
     }
 

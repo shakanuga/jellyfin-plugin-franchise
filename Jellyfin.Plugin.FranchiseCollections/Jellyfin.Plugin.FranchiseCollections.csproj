@@ -1,8 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Jellyfin 10.11 läuft auf .NET 9. Für Jellyfin 10.10: net8.0 + JellyfinVersion 10.10.* -->
-    <TargetFramework>net9.0</TargetFramework>
+    <!-- Jellyfin 10.11 läuft auf .NET 9 -->
+    <PluginTargetFramework Condition="'$(PluginTargetFramework)' == ''">net9.0</PluginTargetFramework>
+    <TargetFramework>$(PluginTargetFramework)</TargetFramework>
     <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">10.11.*</JellyfinVersion>
     <RootNamespace>Jellyfin.Plugin.FranchiseCollections</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.FranchiseCollections</AssemblyName>

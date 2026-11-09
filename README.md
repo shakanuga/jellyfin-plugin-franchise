@@ -13,13 +13,12 @@ Auf dem Unraid-Server (oder überall mit Docker) – es muss kein .NET installie
 
 ```bash
 ./build.sh          # Jellyfin 10.11
-./build.sh 10.10    # Jellyfin 10.10
 ```
 
 Ergebnis: `dist/FranchiseCollections_0.1.0.0/` mit DLL und `meta.json`.
 
-Alternativ ins eigene GitHub-Repo pushen – die Action unter `.github/workflows/build.yml` baut beide
-Varianten und stellt sie als Download (Artifact) bereit.
+Alternativ ins eigene GitHub-Repo pushen – die Action unter `.github/workflows/build.yml` baut die DLL
+und stellt sie als Download (Artifact) bereit.
 
 ## Installieren
 
