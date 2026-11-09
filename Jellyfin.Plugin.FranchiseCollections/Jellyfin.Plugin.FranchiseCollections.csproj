@@ -1,10 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <!-- Jellyfin 10.11 läuft auf .NET 9 -->
-    <PluginTargetFramework Condition="'$(PluginTargetFramework)' == ''">net9.0</PluginTargetFramework>
+    <!-- Jellyfin 12.x läuft auf .NET 10 (10.11: net9.0 + JellyfinVersion 10.11.*) -->
+    <PluginTargetFramework Condition="'$(PluginTargetFramework)' == ''">net10.0</PluginTargetFramework>
     <TargetFramework>$(PluginTargetFramework)</TargetFramework>
-    <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">10.11.*</JellyfinVersion>
+    <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">12.*</JellyfinVersion>
     <RootNamespace>Jellyfin.Plugin.FranchiseCollections</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.FranchiseCollections</AssemblyName>
     <AssemblyVersion>0.1.0.0</AssemblyVersion>

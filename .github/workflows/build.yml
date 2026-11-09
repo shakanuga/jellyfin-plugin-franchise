@@ -11,7 +11,14 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          - jellyfin: "12"
+            package: "12.*"
+            abi: "12.0.0.0"
+            tfm: net10.0
+            sdk: "10.0.x"
           - jellyfin: "10.11"
+            package: "10.11.*"
+            abi: "10.11.0.0"
             tfm: net9.0
             sdk: "9.0.x"
     steps:
@@ -23,11 +30,11 @@ jobs:
         run: |
           VERSION=$(grep -oP '(?<=<AssemblyVersion>)[^<]+' Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj)
           dotnet publish Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj \
-            -c Release -o build -p:PluginTargetFramework=${{ matrix.tfm }} -p:JellyfinVersion="${{ matrix.jellyfin }}.*"
+            -c Release -o build -p:PluginTargetFramework=${{ matrix.tfm }} -p:JellyfinVersion="${{ matrix.package }}"
           OUT="FranchiseCollections_${VERSION}"
           mkdir -p "$OUT"
           cp build/Jellyfin.Plugin.FranchiseCollections.dll "$OUT/"
-          sed -e "s/__VERSION__/${VERSION}/" -e "s/__ABI__/${{ matrix.jellyfin }}.0.0/" meta.json > "$OUT/meta.json"
+          sed -e "s/__VERSION__/${VERSION}/" -e "s/__ABI__/${{ matrix.abi }}/" meta.json > "$OUT/meta.json"
           echo "OUT=$OUT" >> "$GITHUB_ENV"
       - uses: actions/upload-artifact@v4
         with:

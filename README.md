@@ -12,12 +12,13 @@ Mitgeliefert: **Marvel** (inkl. MCU mit 6 Phasen, X-Men/Deadpool, Spider-Man/Son
 Auf dem Unraid-Server (oder überall mit Docker) – es muss kein .NET installiert sein:
 
 ```bash
-./build.sh          # Jellyfin 10.11
+./build.sh          # Jellyfin 12.x (Standard)
+./build.sh 10.11    # Jellyfin 10.11
 ```
 
 Ergebnis: `dist/FranchiseCollections_0.1.0.0/` mit DLL und `meta.json`.
 
-Alternativ ins eigene GitHub-Repo pushen – die Action unter `.github/workflows/build.yml` baut die DLL
+Alternativ ins eigene GitHub-Repo pushen – die Action unter `.github/workflows/build.yml` baut die DLL für Jellyfin 12.x und 10.11
 und stellt sie als Download (Artifact) bereit.
 
 ## Installieren
