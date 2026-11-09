@@ -116,6 +116,13 @@ public class FranchiseSyncService
             var mediaIdsByDef = new Dictionary<string, HashSet<Guid>>(StringComparer.OrdinalIgnoreCase);
             var managed = new HashSet<Guid>();
             var existingBoxSets = LoadExistingBoxSets();
+            var modelPath = Path.Combine(plugin.DefinitionsFolder, "_model.json");
+            var previousModel = PageModel.Load(modelPath);
+            var model = new PageModel { GeneratedUtc = DateTime.UtcNow };
+            var parentNames = order
+                .SelectMany(p => p.Entries.Where(e => e.Collection is not null).Select(e => (Child: e.Collection!, Parent: p.Name)))
+                .GroupBy(x => x.Child, StringComparer.OrdinalIgnoreCase)
+                .ToDictionary(g => g.Key, g => g.First().Parent, StringComparer.OrdinalIgnoreCase);
 
             // Automatische Quellen nur laden, wenn eine aktive Definition sie braucht
             IReadOnlyList<AaronPerrisMcuSource.GuideItem>? mcuItems = null;
@@ -138,32 +145,77 @@ public class FranchiseSyncService
                     playlistItemsByDef[def.Id] = resolved.PlaylistItems;
                     mediaIdsByDef[def.Id] = resolved.MediaIds;
 
+                    var artworkSource = FindArtworkSource(def, index, resolved.MediaIds);
+                    var pageDef = new PageDef
+                    {
+                        Id = def.Id,
+                        Name = def.Name,
+                        Overview = def.Overview ?? def.Description,
+                        Kicker = def.PosterKicker,
+                        ArtworkItemId = artworkSource?.Id,
+                        Children = def.Entries.Where(e => e.Collection is not null).Select(e => e.Collection!).ToList(),
+                        Media = resolved.CollectionItems.Where(id => !collectionIds.ContainsValue(id)).ToList(),
+                        HasCollection = def.Collection,
+                        Scope = def.Entries.Select(e => e.Scope).FirstOrDefault(sc => sc is not null)
+                    };
+                    model.Defs.Add(pageDef);
+
                     if (def.Collection)
                     {
                         var boxSetId = await SyncCollectionAsync(def, resolved.CollectionItems, config, state, existingBoxSets, ct).ConfigureAwait(false);
                         if (boxSetId is Guid id)
                         {
                             collectionIds[def.Id] = id;
+                            pageDef.CollectionId = id;
                             rep.CollectionItems = resolved.CollectionItems.Count;
+
+                            if (config.GenerateArtwork && artworkSource is not null && _libraryManager.GetItemById(id) is BaseItem box)
+                            {
+                                var texts = new ArtworkGenerator.Texts(
+                                    def.PosterKicker ?? (parentNames.TryGetValue(def.Id, out var parentName) ? parentName : "Franchise"),
+                                    def.PosterTitle ?? def.Name,
+                                    def.PosterSubtitle ?? DescribeMedia(resolved.MediaIds));
+                                await ApplyGeneratedArtworkAsync(box, def, artworkSource, texts, $"{def.Id}|collection", state, ct).ConfigureAwait(false);
+                            }
                         }
                     }
 
+                    var playlistName = string.IsNullOrWhiteSpace(def.PlaylistName) ? $"{def.Name} – Reihenfolge" : def.PlaylistName!;
                     if (def.Playlist && sourceFailed)
                     {
-                        // Quelle nicht verfügbar → vorhandene Playlists nicht anfassen (nie leeren)
+                        // Quelle nicht verfügbar → vorhandene Playlists nicht anfassen (nie leeren); Seite zeigt den letzten Stand
                         rep.Error = "Quelle nicht verfügbar – Playlists unverändert.";
+                        var old = previousModel?.Defs.Find(d => string.Equals(d.Id, def.Id, StringComparison.OrdinalIgnoreCase));
+                        if (old is not null)
+                        {
+                            pageDef.HasOrder = old.HasOrder;
+                            pageDef.OrderName = old.OrderName;
+                            pageDef.Order = old.Order;
+                        }
                     }
                     else if (def.Playlist)
                     {
                         managed.UnionWith(resolved.PlaylistItems);
+                        pageDef.HasOrder = resolved.PlaylistItems.Count > 0;
+                        pageDef.OrderName = playlistName;
+                        pageDef.Order = resolved.PlaylistItems;
                         if (users.Count == 0)
                         {
                             rep.Error = "Kein Benutzer für die Playlist gefunden.";
                         }
 
+                        var playlistTexts = new ArtworkGenerator.Texts(
+                            def.PosterKicker ?? (def.Collection ? "Reihenfolge" : "Watch Order"),
+                            def.PosterTitle ?? (def.Collection ? def.Name : playlistName),
+                            def.PosterSubtitle ?? DescribeMedia(resolved.MediaIds));
+
                         foreach (var (userId, user) in users)
                         {
-                            await SyncPlaylistForUserAsync(def, resolved.PlaylistItems, userId, user, config, state, ct).ConfigureAwait(false);
+                            var playlistId = await SyncPlaylistForUserAsync(def, resolved.PlaylistItems, userId, user, config, state, ct).ConfigureAwait(false);
+                            if (config.GenerateArtwork && artworkSource is not null && playlistId is Guid pid && _libraryManager.GetItemById(pid) is BaseItem pl)
+                            {
+                                await ApplyGeneratedArtworkAsync(pl, def, artworkSource, playlistTexts, $"{def.Id}|playlist|{pid:N}", state, ct).ConfigureAwait(false);
+                            }
                         }
 
                         rep.PlaylistItems = resolved.PlaylistItems.Count;
@@ -183,6 +235,14 @@ public class FranchiseSyncService
             }
 
             _managedItems = managed;
+            try
+            {
+                model.Save(modelPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Franchise Collections: Daten für die Franchise-Seite konnten nicht gespeichert werden");
+            }
         }
         catch (OperationCanceledException)
         {
@@ -843,6 +903,151 @@ public class FranchiseSyncService
         }
     }
 
+    // ------------------------------------------------------------------ Erzeugte Bilder
+
+    /// <summary>Titel für Poster/Hintergrund: "artwork" aus der Definition, sonst bestbewerteter Titel mit Hintergrundbild.</summary>
+    private BaseItem? FindArtworkSource(FranchiseDefinition def, LibraryIndex index, HashSet<Guid> mediaIds)
+    {
+        static bool HasBackdrop(BaseItem? item) => item is not null && !string.IsNullOrEmpty(item.GetImagePath(ImageType.Backdrop, 0));
+
+        if (!string.IsNullOrWhiteSpace(def.Artwork))
+        {
+            var chosen = index.FindMovie(def.Artwork, null, null, false) ?? index.FindSeries(def.Artwork, null, null, false);
+            if (HasBackdrop(chosen))
+            {
+                return chosen;
+            }
+        }
+
+        return mediaIds
+            .Select(id => _libraryManager.GetItemById(id))
+            .Where(HasBackdrop)
+            .OrderByDescending(i => i!.CommunityRating ?? 0)
+            .FirstOrDefault();
+    }
+
+    /// <summary>"2008–2012 · 6 Filme · 2 Serien"</summary>
+    private string DescribeMedia(IEnumerable<Guid> mediaIds)
+    {
+        var items = mediaIds.Select(id => _libraryManager.GetItemById(id)).Where(i => i is not null).ToList();
+        var movies = items.Count(i => i is Movie);
+        var series = items.Count - movies;
+        var years = items.Where(i => i!.ProductionYear is > 1900).Select(i => i!.ProductionYear!.Value).ToList();
+        var parts = new List<string>();
+        if (years.Count > 0)
+        {
+            var min = years.Min();
+            var max = years.Max();
+            parts.Add(min == max ? min.ToString(System.Globalization.CultureInfo.InvariantCulture) : $"{min}–{max}");
+        }
+
+        if (movies > 0)
+        {
+            parts.Add(movies == 1 ? "1 Film" : $"{movies} Filme");
+        }
+
+        if (series > 0)
+        {
+            parts.Add(series == 1 ? "1 Serie" : $"{series} Serien");
+        }
+
+        return string.Join(" · ", parts);
+    }
+
+    /// <summary>
+    /// Setzt erzeugtes Poster (Primary), Vorschaubild (Thumb) und das Hintergrundbild des Quell-Titels (Backdrop).
+    /// Nur neu, wenn sich Quelle oder Texte geändert haben. Eigene Bilder (Datei/URL in der Definition) haben Vorrang.
+    /// </summary>
+    private async Task ApplyGeneratedArtworkAsync(
+        BaseItem target,
+        FranchiseDefinition def,
+        BaseItem source,
+        ArtworkGenerator.Texts texts,
+        string stateKey,
+        SyncState state,
+        CancellationToken ct)
+    {
+        var backdropPath = source.GetImagePath(ImageType.Backdrop, 0);
+        if (string.IsNullOrEmpty(backdropPath) || !File.Exists(backdropPath))
+        {
+            return;
+        }
+
+        var fingerprint = string.Join(
+            "|",
+            ArtworkGenerator.Version,
+            source.Id.ToString("N"),
+            backdropPath,
+            File.GetLastWriteTimeUtc(backdropPath).Ticks,
+            texts.Kicker,
+            texts.Title,
+            texts.Subtitle,
+            target.HasImage(ImageType.Primary, 0),
+            target.HasImage(ImageType.Thumb, 0));
+
+        if (state.Images.TryGetValue(stateKey, out var previous) && previous == fingerprint)
+        {
+            return;
+        }
+
+        var hasCustomPoster = !string.IsNullOrWhiteSpace(def.Poster) || HasLocalImage(def.Id, "poster");
+        var hasCustomBackdrop = !string.IsNullOrWhiteSpace(def.Backdrop) || HasLocalImage(def.Id, "backdrop");
+
+        try
+        {
+            if (!hasCustomPoster)
+            {
+                var poster = ArtworkGenerator.CreatePoster(backdropPath, texts);
+                using var ms = new MemoryStream(poster);
+                await _providerManager.SaveImage(target, ms, "image/jpeg", ImageType.Primary, 0, ct).ConfigureAwait(false);
+            }
+
+            var thumb = ArtworkGenerator.CreateThumb(backdropPath, texts);
+            using (var ms = new MemoryStream(thumb))
+            {
+                await _providerManager.SaveImage(target, ms, "image/jpeg", ImageType.Thumb, 0, ct).ConfigureAwait(false);
+            }
+
+            if (!hasCustomBackdrop)
+            {
+                var mime = Path.GetExtension(backdropPath).ToLowerInvariant() switch
+                {
+                    ".png" => "image/png",
+                    ".webp" => "image/webp",
+                    _ => "image/jpeg"
+                };
+                await using var fs = File.OpenRead(backdropPath);
+                await _providerManager.SaveImage(target, fs, mime, ImageType.Backdrop, 0, ct).ConfigureAwait(false);
+            }
+
+            await target.UpdateToRepositoryAsync(ItemUpdateType.ImageUpdate, ct).ConfigureAwait(false);
+
+            // Fingerprint nach dem Speichern berechnen (HasImage ist jetzt true)
+            state.Images[stateKey] = string.Join(
+                "|",
+                ArtworkGenerator.Version,
+                source.Id.ToString("N"),
+                backdropPath,
+                File.GetLastWriteTimeUtc(backdropPath).Ticks,
+                texts.Kicker,
+                texts.Title,
+                texts.Subtitle,
+                true,
+                true);
+            _logger.LogInformation("Franchise Collections: Bilder für \"{Name}\" erzeugt", target.Name);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Franchise Collections: Bilder für \"{Name}\" konnten nicht erzeugt werden", target.Name);
+        }
+    }
+
+    private static bool HasLocalImage(string defId, string suffix)
+    {
+        var folder = Plugin.Instance!.DefinitionsFolder;
+        return ImageExtensions.Any(ext => File.Exists(Path.Combine(folder, $"{defId}-{suffix}{ext}")));
+    }
+
     // ------------------------------------------------------------------ Playlists
 
     /// <summary>Ausgewählte Benutzer (bzw. der erste Benutzer, wenn keiner ausgewählt ist).</summary>
@@ -882,7 +1087,7 @@ public class FranchiseSyncService
             .FirstOrDefault(p => p.OwnerUserId == userId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
     }
 
-    private async Task SyncPlaylistForUserAsync(
+    private async Task<Guid?> SyncPlaylistForUserAsync(
         FranchiseDefinition def,
         List<Guid> allItems,
         Guid userId,
@@ -909,7 +1114,7 @@ public class FranchiseSyncService
         {
             if (items.Count == 0)
             {
-                return;
+                return null;
             }
 
             _logger.LogInformation("Franchise Collections: lege Playlist \"{Name}\" für {User} an ({Count} Einträge)", name, user.Username, items.Count);
@@ -923,7 +1128,7 @@ public class FranchiseSyncService
             }).ConfigureAwait(false);
 
             state.Playlists[$"{def.Id}|{userId:N}"] = created.Id;
-            return;
+            return Guid.TryParse(created.Id, out var createdId) ? createdId : null;
         }
 
         var current = playlist.LinkedChildren
@@ -945,5 +1150,6 @@ public class FranchiseSyncService
 
         state.Playlists.Remove(def.Id);
         state.Playlists[$"{def.Id}|{userId:N}"] = playlist.Id.ToString("N");
+        return playlist.Id;
     }
 }

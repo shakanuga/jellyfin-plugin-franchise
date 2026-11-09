@@ -5,6 +5,8 @@
     <PluginTargetFramework Condition="'$(PluginTargetFramework)' == ''">net10.0</PluginTargetFramework>
     <TargetFramework>$(PluginTargetFramework)</TargetFramework>
     <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">12.*</JellyfinVersion>
+    <SkiaVersion Condition="'$(SkiaVersion)' == '' And $(JellyfinVersion.StartsWith('10.11'))">3.116.1</SkiaVersion>
+    <SkiaVersion Condition="'$(SkiaVersion)' == ''">3.119.4</SkiaVersion>
     <RootNamespace>Jellyfin.Plugin.FranchiseCollections</RootNamespace>
     <AssemblyName>Jellyfin.Plugin.FranchiseCollections</AssemblyName>
     <AssemblyVersion>0.2.0.0</AssemblyVersion>
@@ -24,12 +26,22 @@
     <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)">
       <ExcludeAssets>runtime</ExcludeAssets>
     </PackageReference>
+    <!-- Grafik für die erzeugten Poster; dieselbe Version wie in Jellyfin (Jellyfin lädt sie zur Laufzeit) -->
+    <PackageReference Include="SkiaSharp" Version="$(SkiaVersion)">
+      <ExcludeAssets>runtime;native</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
   <ItemGroup>
     <None Remove="Configuration\configPage.html" />
     <EmbeddedResource Include="Configuration\configPage.html" />
     <EmbeddedResource Include="Definitions\*.json" />
+    <EmbeddedResource Include="Assets\*.otf" />
+    <EmbeddedResource Include="Web\*.html" />
   </ItemGroup>
 
 </Project>

@@ -41,6 +41,21 @@ public class FranchiseDefinition
     /// <summary>Optional: TMDb-Collection-ID, damit Jellyfin beim Aktualisieren der Metadaten Bilder von TMDb holen kann.</summary>
     public string? TmdbCollectionId { get; set; }
 
+    /// <summary>
+    /// Titel, dessen Hintergrundbild für die erzeugten Poster/Vorschaubilder benutzt wird, z. B. "imdb:tt4154796".
+    /// Ohne Angabe wird automatisch ein gut bewerteter Titel mit Hintergrundbild aus der Sammlung gewählt.
+    /// </summary>
+    public string? Artwork { get; set; }
+
+    /// <summary>Kleine Zeile über dem Titel auf dem Poster (z. B. "Marvel Cinematic Universe").</summary>
+    public string? PosterKicker { get; set; }
+
+    /// <summary>Großer Titel auf dem Poster (Standard: Name).</summary>
+    public string? PosterTitle { get; set; }
+
+    /// <summary>Zeile unter dem Titel (Standard: automatisch, z. B. "2008–2012 · 6 Filme").</summary>
+    public string? PosterSubtitle { get; set; }
+
     /// <summary>Optional: Poster-URL.</summary>
     public string? Poster { get; set; }
 

@@ -3,6 +3,9 @@
 [
   {
     "id": "mcu",
+    "artwork": "imdb:tt4154756",
+    "posterTitle": "MCU",
+    "posterKicker": "Marvel Cinematic Universe",
     "name": "Marvel Cinematic Universe",
     "sortName": "Marvel Cinematic Universe",
     "description": "MCU mit Phase 1–6 als Unter-Sammlungen (Filme + Disney+-Serien).",
@@ -19,6 +22,9 @@
   },
   {
     "id": "mcu-erscheinung",
+    "artwork": "imdb:tt4154796",
+    "posterKicker": "Watch Order · nach Erscheinen",
+    "posterTitle": "MCU",
     "name": "MCU – Erscheinungsreihenfolge",
     "description": "Playlist: alles aus der MCU-Sammlung in Erscheinungsreihenfolge, folgengenau (z. B. Loki S1 und Black Widow abwechselnd, wie sie erschienen sind). Reihenfolge automatisch von aaronperris.com/mcu.",
     "collection": false,
@@ -30,6 +36,9 @@
   },
   {
     "id": "mcu-chronologisch",
+    "artwork": "imdb:tt0458339",
+    "posterKicker": "Watch Order · chronologisch",
+    "posterTitle": "MCU",
     "name": "MCU – Chronologisch",
     "description": "Playlist: alles aus der MCU-Sammlung in der Reihenfolge der Handlung (Captain America: The First Avenger zuerst …), folgengenau. Reihenfolge automatisch von aaronperris.com/mcu.",
     "collection": false,
@@ -41,6 +50,9 @@
   },
   {
     "id": "marvel-multiversum",
+    "artwork": "imdb:tt6263850",
+    "posterKicker": "Watch Order · chronologisch",
+    "posterTitle": "Marvel Multiversum",
     "name": "Marvel-Multiversum – Chronologisch",
     "description": "Playlist: ALLES, was aaronperris.com als Kanon führt – auch Fox-X-Men, Sony-Spider-Man, Netflix-Serien, Blade … – chronologisch. Standardmäßig aus.",
     "defaultEnabled": false,
@@ -53,6 +65,8 @@
   },
   {
     "id": "mcu-phase-1",
+    "artwork": "imdb:tt0848228",
+    "posterTitle": "Phase 1",
     "name": "MCU – Phase 1",
     "sortName": "MCU Phase 1",
     "description": "2008–2012: Iron Man bis The Avengers",
@@ -67,6 +81,8 @@
   },
   {
     "id": "mcu-phase-2",
+    "artwork": "imdb:tt2395427",
+    "posterTitle": "Phase 2",
     "name": "MCU – Phase 2",
     "sortName": "MCU Phase 2",
     "description": "2013–2015: Iron Man 3 bis Ant-Man",
@@ -81,6 +97,8 @@
   },
   {
     "id": "mcu-phase-3",
+    "artwork": "imdb:tt4154756",
+    "posterTitle": "Phase 3",
     "name": "MCU – Phase 3",
     "sortName": "MCU Phase 3",
     "description": "2016–2019: Civil War bis Far From Home",
@@ -100,6 +118,8 @@
   },
   {
     "id": "mcu-phase-4",
+    "artwork": "imdb:tt10872600",
+    "posterTitle": "Phase 4",
     "name": "MCU – Phase 4",
     "sortName": "MCU Phase 4",
     "description": "2021–2022: WandaVision bis Wakanda Forever",
@@ -125,6 +145,8 @@
   },
   {
     "id": "mcu-phase-5",
+    "artwork": "imdb:tt6791350",
+    "posterTitle": "Phase 5",
     "name": "MCU – Phase 5",
     "sortName": "MCU Phase 5",
     "description": "2023–2025: Quantumania bis Ironheart",
@@ -146,6 +168,8 @@
   },
   {
     "id": "mcu-phase-6",
+    "artwork": "imdb:tt10676052",
+    "posterTitle": "Phase 6",
     "name": "MCU – Phase 6",
     "sortName": "MCU Phase 6",
     "description": "ab 2025: The Fantastic Four: First Steps, Spider-Man: Brand New Day, Avengers: Doomsday …",

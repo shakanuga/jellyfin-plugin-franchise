@@ -67,6 +67,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
                 }
             }
 
+            // 0.3.0: Gesehenes bleibt standardmäßig in den Playlists
+            if (config.ConfigVersion < 3)
+            {
+                config.RemoveWatchedFromPlaylists = false;
+                config.GenerateArtwork = true;
+                config.ConfigVersion = 3;
+            }
+
             config.EnabledBuiltIns = enabled.ToArray();
             config.KnownBuiltIns = builtIns.Select(d => d.Id).ToArray();
             config.BuiltInsInitialized = true;

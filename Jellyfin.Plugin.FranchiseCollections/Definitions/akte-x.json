@@ -1,6 +1,7 @@
 // Akte X – Serie und beide Filme, Playlist in der richtigen Reihenfolge
 {
   "id": "akte-x",
+  "artwork": "imdb:tt0106179|tvdb:77398",
   "name": "Akte X",
   "description": "Serie + beide Filme. Playlist: Staffel 1–5 → Der Film → Staffel 6–9 → I Want to Believe → Staffel 10–11.",
   "overview": "Mulder und Scully – alle Staffeln und beide Kinofilme. Die Playlist „Akte X – Reihenfolge“ zeigt, wann welcher Film dran ist.",

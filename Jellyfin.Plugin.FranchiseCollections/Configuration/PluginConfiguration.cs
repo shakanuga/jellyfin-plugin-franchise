@@ -26,8 +26,14 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Benutzer, die eigene Watch-Order-Playlists bekommen. Leer = erster Benutzer (meist der Admin).</summary>
     public string[] PlaylistUserIds { get; set; } = Array.Empty<string>();
 
-    /// <summary>Gesehene Filme/Folgen aus den Playlists des jeweiligen Benutzers entfernen (oben steht immer das Nächste).</summary>
-    public bool RemoveWatchedFromPlaylists { get; set; } = true;
+    /// <summary>Gesehene Filme/Folgen aus den Playlists des jeweiligen Benutzers entfernen (Standard: nein – Gesehenes bekommt nur den Haken).</summary>
+    public bool RemoveWatchedFromPlaylists { get; set; }
+
+    /// <summary>Eigene Poster/Vorschaubilder für Sammlungen und Playlists erzeugen (statt der Jellyfin-Collage).</summary>
+    public bool GenerateArtwork { get; set; } = true;
+
+    /// <summary>Version der gespeicherten Einstellungen – für Umstellungen bei Updates.</summary>
+    public int ConfigVersion { get; set; }
 
     /// <summary>Namens-Zuordnungen für automatische Quellen, eine pro Zeile: "Name in der Liste = Name in Jellyfin".</summary>
     public string SeriesAliases { get; set; } = string.Empty;

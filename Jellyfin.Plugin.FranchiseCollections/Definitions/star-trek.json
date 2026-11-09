@@ -2,6 +2,7 @@
 // Parallel gelaufene Serien (z. B. DS9 und Voyager) sind staffelweise abwechselnd einsortiert.
 {
   "id": "star-trek",
+  "artwork": "imdb:tt0796366",
   "name": "Star Trek",
   "description": "Alle Serien + Filme. Playlist: TOS → Filme I–V → TNG (mit VI vor „Wiedervereinigung“) → DS9/VOY abwechselnd mit den TNG-Filmen → ENT → Kelvin → neue Serien.",
   "overview": "Das komplette Star-Trek-Universum. Die Playlist „Star Trek – Reihenfolge“ zeigt, wann welcher Film zwischen den Staffeln kommt.",

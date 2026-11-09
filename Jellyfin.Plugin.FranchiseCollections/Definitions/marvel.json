@@ -3,6 +3,8 @@
 [
   {
     "id": "marvel",
+    "artwork": "imdb:tt4154796",
+    "posterKicker": "Franchise",
     "name": "Marvel",
     "sortName": "Marvel",
     "description": "Dach-Sammlung: MCU, X-Men, Spider-Man (Sony), Marvel-Serien (Netflix/ABC).",
@@ -17,6 +19,8 @@
   },
   {
     "id": "marvel-x-men",
+    "artwork": "imdb:tt1877832",
+    "posterTitle": "X-Men & Deadpool",
     "name": "Marvel – X-Men & Deadpool",
     "sortName": "Marvel X-Men",
     "description": "X-Men-, Wolverine- und Deadpool-Filme (Fox)",
@@ -29,6 +33,8 @@
   },
   {
     "id": "marvel-spider-man",
+    "posterTitle": "Spider-Man",
+    "posterKicker": "Marvel · Sony",
     "name": "Marvel – Spider-Man (Sony)",
     "sortName": "Marvel Spider-Man",
     "description": "Raimi-Trilogie, The Amazing Spider-Man, Spider-Verse, Venom",
@@ -41,6 +47,8 @@
   },
   {
     "id": "marvel-tv",
+    "posterTitle": "Marvel-Serien",
+    "posterKicker": "Marvel · Netflix & ABC",
     "name": "Marvel – Serien (Netflix & ABC)",
     "sortName": "Marvel Serien",
     "description": "Agents of S.H.I.E.L.D., Agent Carter, Daredevil, Jessica Jones, Luke Cage, Iron Fist, The Defenders, The Punisher",
