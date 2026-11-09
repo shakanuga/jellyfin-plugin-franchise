@@ -1,10 +1,12 @@
 name: Release
 
-# Neue Version veröffentlichen:  git tag v0.2.0 && git push origin v0.2.0
-# Danach bietet Jellyfin das Update im Katalog an (Repository-URL siehe README).
+# Neue Version veröffentlichen: <AssemblyVersion> im .csproj erhöhen und pushen (oder Action von Hand starten).
+# Gibt es für die Version noch kein Release, wird es erstellt – Jellyfin bietet das Update dann im Katalog an.
+# Änderungshinweis: Text in CHANGELOG.md unter der Überschrift "## <Version>".
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,13 +20,21 @@ jobs:
         with:
           dotnet-version: "10.0.x"
 
-      - name: Version aus Tag
+      - name: Version lesen / schon veröffentlicht?
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          TAG="${GITHUB_REF_NAME#v}"
-          IFS=. read -r A B C D <<< "$TAG"
-          echo "VERSION=${A:-0}.${B:-0}.${C:-0}.${D:-0}" >> "$GITHUB_ENV"
+          VERSION=$(grep -oP '(?<=<AssemblyVersion>)[^<]+' Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj)
+          TAG="v${VERSION%.0}"
+          echo "VERSION=$VERSION" >> "$GITHUB_ENV"
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "Release $TAG gibt es schon – nichts zu tun."
+            echo "SKIP=1" >> "$GITHUB_ENV"
+          fi
 
       - name: Bauen (Jellyfin 12)
+        if: env.SKIP != '1'
         run: |
           dotnet publish Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj \
             -c Release -o build -p:PluginTargetFramework=net10.0 -p:JellyfinVersion="12.*" \
@@ -38,13 +48,26 @@ jobs:
           echo "CHECKSUM=$(md5sum "$ZIP" | cut -d' ' -f1)" >> "$GITHUB_ENV"
 
       - name: Katalog-Manifest erzeugen
+        if: env.SKIP != '1'
         run: |
           python3 - <<'PY'
           import json, os, datetime, subprocess
           v = os.environ["VERSION"]
           repo = os.environ["GITHUB_REPOSITORY"]
-          tag = os.environ["GITHUB_REF_NAME"]
-          log = subprocess.run(["git", "tag", "-l", "--format=%(contents)", tag], capture_output=True, text=True).stdout.strip()
+          tag = os.environ["TAG"]
+          log = ""
+          if os.path.exists("CHANGELOG.md"):
+              # Abschnitt "## <Version>" bis zur nächsten Überschrift
+              lines, take = [], False
+              for line in open("CHANGELOG.md", encoding="utf-8"):
+                  if line.startswith("## "):
+                      if take:
+                          break
+                      take = line[3:].strip() in (v, tag, tag.lstrip("v"))
+                      continue
+                  if take:
+                      lines.append(line.rstrip())
+              log = "\n".join(lines).strip()
           manifest = [{
               "guid": "4aa153a4-4b69-49df-b058-81da9a1685b2",
               "name": "Franchise Collections",
@@ -66,8 +89,10 @@ jobs:
           cat manifest.json
 
       - name: GitHub-Release erstellen
+        if: env.SKIP != '1'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "$ZIP" manifest.json \
-            --title "Franchise Collections ${GITHUB_REF_NAME}" --generate-notes
+          python3 -c "import json;print(json.load(open('manifest.json'))[0]['versions'][0]['changelog'])" > notes.md
+          gh release create "$TAG" "$ZIP" manifest.json --target "$GITHUB_SHA" \
+            --title "Franchise Collections $TAG" --notes-file notes.md

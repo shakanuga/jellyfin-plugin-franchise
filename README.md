@@ -31,12 +31,9 @@ Benötigt **Jellyfin 12.x**. (Für 10.11 gibt es unter *Actions* einen Test-Buil
 
 ## Neue Version veröffentlichen
 
-```bash
-git tag v0.2.1 -m "Was sich geändert hat"
-git push origin v0.2.1
-```
-
-Die Action *Release* baut das Plugin, erstellt das GitHub-Release und das Katalog-Manifest.
+Im `.csproj` `<AssemblyVersion>` (und `<FileVersion>`) erhöhen, in `CHANGELOG.md` einen Abschnitt
+`## 0.2.1` mit den Änderungen ergänzen und pushen. Die Action *Release* merkt, dass es die Version noch nicht
+gibt, baut das Plugin und erstellt das GitHub-Release samt Katalog-Manifest.
 
 ## Was passiert
 
