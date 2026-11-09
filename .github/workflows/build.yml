@@ -22,7 +22,7 @@ jobs:
             tfm: net9.0
             sdk: "9.0.x"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: ${{ matrix.sdk }}
