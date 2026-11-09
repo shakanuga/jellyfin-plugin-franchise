@@ -1,0 +1,73 @@
+name: Release
+
+# Neue Version veröffentlichen:  git tag v0.2.0 && git push origin v0.2.0
+# Danach bietet Jellyfin das Update im Katalog an (Repository-URL siehe README).
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Version aus Tag
+        run: |
+          TAG="${GITHUB_REF_NAME#v}"
+          IFS=. read -r A B C D <<< "$TAG"
+          echo "VERSION=${A:-0}.${B:-0}.${C:-0}.${D:-0}" >> "$GITHUB_ENV"
+
+      - name: Bauen (Jellyfin 12)
+        run: |
+          dotnet publish Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj \
+            -c Release -o build -p:PluginTargetFramework=net10.0 -p:JellyfinVersion="12.*" \
+            -p:AssemblyVersion=$VERSION -p:FileVersion=$VERSION
+          mkdir pkg
+          cp build/Jellyfin.Plugin.FranchiseCollections.dll pkg/
+          sed -e "s/__VERSION__/${VERSION}/" -e "s/__ABI__/12.0.0.0/" meta.json > pkg/meta.json
+          ZIP="FranchiseCollections_${VERSION}.zip"
+          (cd pkg && zip -q "../$ZIP" *)
+          echo "ZIP=$ZIP" >> "$GITHUB_ENV"
+          echo "CHECKSUM=$(md5sum "$ZIP" | cut -d' ' -f1)" >> "$GITHUB_ENV"
+
+      - name: Katalog-Manifest erzeugen
+        run: |
+          python3 - <<'PY'
+          import json, os, datetime, subprocess
+          v = os.environ["VERSION"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          tag = os.environ["GITHUB_REF_NAME"]
+          log = subprocess.run(["git", "tag", "-l", "--format=%(contents)", tag], capture_output=True, text=True).stdout.strip()
+          manifest = [{
+              "guid": "4aa153a4-4b69-49df-b058-81da9a1685b2",
+              "name": "Franchise Collections",
+              "description": "Franchise-Sammlungen (MCU mit Phasen, Marvel, Star Trek, Akte X …) mit Filmen und Serien sowie automatisch sortierte Watch-Order-Playlists pro Benutzer.",
+              "overview": "Große Sammlungen und Watch-Order-Playlists",
+              "owner": repo.split("/")[0],
+              "category": "General",
+              "versions": [{
+                  "version": v,
+                  "changelog": log or f"Version {v}",
+                  "targetAbi": "12.0.0.0",
+                  "sourceUrl": f"https://github.com/{repo}/releases/download/{tag}/{os.environ['ZIP']}",
+                  "checksum": os.environ["CHECKSUM"],
+                  "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+              }]
+          }]
+          json.dump(manifest, open("manifest.json", "w"), indent=2, ensure_ascii=False)
+          PY
+          cat manifest.json
+
+      - name: GitHub-Release erstellen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" manifest.json \
+            --title "Franchise Collections ${GITHUB_REF_NAME}" --generate-notes

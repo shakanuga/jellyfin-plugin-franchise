@@ -20,11 +20,17 @@ public class PluginConfiguration : BasePluginConfiguration
     /// <summary>Eigene Definitionen als JSON (ein Objekt oder ein Array). Gleiche ID überschreibt eine mitgelieferte Definition.</summary>
     public string CustomDefinitionsJson { get; set; } = string.Empty;
 
-    /// <summary>Benutzer, dem die Watch-Order-Playlists gehören. Leer = erster Benutzer (meist der Admin).</summary>
-    public string PlaylistOwnerUserId { get; set; } = string.Empty;
+    /// <summary>Mitgelieferte Definitionen, die das Plugin schon kennt (neue werden beim Update automatisch aktiviert).</summary>
+    public string[] KnownBuiltIns { get; set; } = Array.Empty<string>();
 
-    /// <summary>Playlists für alle Benutzer sichtbar machen.</summary>
-    public bool PlaylistsPublic { get; set; } = true;
+    /// <summary>Benutzer, die eigene Watch-Order-Playlists bekommen. Leer = erster Benutzer (meist der Admin).</summary>
+    public string[] PlaylistUserIds { get; set; } = Array.Empty<string>();
+
+    /// <summary>Gesehene Filme/Folgen aus den Playlists des jeweiligen Benutzers entfernen (oben steht immer das Nächste).</summary>
+    public bool RemoveWatchedFromPlaylists { get; set; } = true;
+
+    /// <summary>Namens-Zuordnungen für automatische Quellen, eine pro Zeile: "Name in der Liste = Name in Jellyfin".</summary>
+    public string SeriesAliases { get; set; } = string.Empty;
 
     /// <summary>Nach jedem Bibliotheks-Scan automatisch synchronisieren.</summary>
     public bool SyncAfterLibraryScan { get; set; } = true;
@@ -50,4 +56,7 @@ public class BuiltInInfo
 
     /// <summary>IDs der Definitionen, die diese als Unter-Sammlung enthalten.</summary>
     public string[] IncludedBy { get; set; } = Array.Empty<string>();
+
+    /// <summary>Die Definition als JSON – für "Als eigene Kopie bearbeiten" auf der Einstellungsseite.</summary>
+    public string Json { get; set; } = string.Empty;
 }

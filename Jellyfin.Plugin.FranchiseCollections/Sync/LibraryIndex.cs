@@ -21,7 +21,9 @@ public sealed class LibraryIndex
     private readonly Dictionary<string, List<BaseItem>> _byId = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<BaseItem>> _byTitle = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, List<BaseItem>> _byTmdbCollection = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, List<BaseItem>> _seriesByName = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<Guid, List<Episode>> _episodes = new();
+    private readonly Dictionary<Guid, string> _names = new();
 
     public LibraryIndex(ILibraryManager libraryManager)
     {
@@ -37,6 +39,7 @@ public sealed class LibraryIndex
         foreach (var item in items)
         {
             var kind = item is MediaBrowser.Controller.Entities.Movies.Movie ? "movie" : "series";
+            _names[item.Id] = item.ProductionYear is int py ? $"{item.Name} ({py})" : item.Name;
             foreach (var (provider, value) in item.ProviderIds)
             {
                 if (string.IsNullOrWhiteSpace(value))
@@ -53,11 +56,19 @@ public sealed class LibraryIndex
                 Add(_byId, $"{kind}|{provider}:{value.Trim()}", item);
             }
 
-            if (item.ProductionYear is int year)
+            foreach (var title in new[] { item.Name, item.OriginalTitle }.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct())
             {
-                foreach (var title in new[] { item.Name, item.OriginalTitle }.Where(t => !string.IsNullOrWhiteSpace(t)).Distinct())
+                foreach (var key in NameKeys(title!))
                 {
-                    Add(_byTitle, $"{kind}|{Normalize(title!)}|{year}", item);
+                    if (item.ProductionYear is int year)
+                    {
+                        Add(_byTitle, $"{kind}|{key}|{year}", item);
+                    }
+
+                    if (kind == "series")
+                    {
+                        Add(_seriesByName, key, item);
+                    }
                 }
             }
         }
@@ -65,6 +76,8 @@ public sealed class LibraryIndex
         MovieCount = items.Count(i => i is MediaBrowser.Controller.Entities.Movies.Movie);
         SeriesCount = items.Count - MovieCount;
     }
+
+    public string GetName(Guid id) => _names.TryGetValue(id, out var n) ? n : id.ToString("N");
 
     public int MovieCount { get; }
 
@@ -165,14 +178,79 @@ public sealed class LibraryIndex
             // ±1 Jahr, weil Erscheinungsjahre je nach Land/Quelle schwanken
             foreach (var candidateYear in new[] { y, y - 1, y + 1 })
             {
-                if (_byTitle.TryGetValue($"{kind}|{Normalize(title)}|{candidateYear}", out var hits) && hits.Count > 0)
+                foreach (var key in NameKeys(title))
                 {
-                    return hits[0];
+                    if (_byTitle.TryGetValue($"{kind}|{key}|{candidateYear}", out var hits) && hits.Count > 0)
+                    {
+                        return hits[0];
+                    }
                 }
             }
         }
 
         return null;
+    }
+
+    /// <summary>
+    /// Serie nur über den Namen finden (für automatische Quellen, die keine IDs liefern).
+    /// Bei mehreren Treffern gewinnt die Serie, die zuletzt vor <paramref name="airYear"/> gestartet ist.
+    /// </summary>
+    public BaseItem? FindSeriesByName(string name, int? airYear)
+    {
+        foreach (var key in NameKeys(name))
+        {
+            if (!_seriesByName.TryGetValue(key, out var hits) || hits.Count == 0)
+            {
+                continue;
+            }
+
+            if (hits.Count == 1 || airYear is null)
+            {
+                return hits[0];
+            }
+
+            return hits
+                .OrderBy(h => h.ProductionYear is int y && y <= airYear + 1 ? 0 : 1)
+                .ThenByDescending(h => h.ProductionYear ?? 0)
+                .First();
+        }
+
+        return null;
+    }
+
+    /// <summary>Vergleichsschlüssel für einen Titel: normalisiert, zusätzlich ohne "Marvel's"/"DC's" und ohne "(2014)" am Ende.</summary>
+    public static IEnumerable<string> NameKeys(string title)
+    {
+        var withoutYear = Regex.Replace(title, @"\s*\((19|20)\d{2}\)\s*$", string.Empty);
+        var keys = new List<string>();
+        foreach (var variant in new[] { title, withoutYear })
+        {
+            var n = Normalize(variant);
+            if (n.Length == 0)
+            {
+                continue;
+            }
+
+            keys.Add(n);
+
+            // "Marvel's The Avengers" → "theavengers" → "avengers"
+            var stripped = true;
+            while (stripped)
+            {
+                stripped = false;
+                foreach (var prefix in new[] { "marvels", "dcs", "the" })
+                {
+                    if (n.StartsWith(prefix, StringComparison.Ordinal) && n.Length > prefix.Length + 2)
+                    {
+                        n = n[prefix.Length..];
+                        keys.Add(n);
+                        stripped = true;
+                    }
+                }
+            }
+        }
+
+        return keys.Distinct();
     }
 
     private static void Add(Dictionary<string, List<BaseItem>> dict, string key, BaseItem item)
@@ -189,10 +267,10 @@ public sealed class LibraryIndex
         }
     }
 
-    private static string Normalize(string title)
+    public static string Normalize(string title)
     {
         var sb = new StringBuilder(title.Length);
-        foreach (var c in title.Normalize(NormalizationForm.FormD))
+        foreach (var c in title.Replace("&", " and ", StringComparison.Ordinal).Normalize(NormalizationForm.FormD))
         {
             if (char.IsLetterOrDigit(c))
             {

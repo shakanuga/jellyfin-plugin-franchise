@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Jellyfin.Data.Enums;
 using Jellyfin.Plugin.FranchiseCollections.Configuration;
 using Jellyfin.Plugin.FranchiseCollections.Model;
+using Jellyfin.Plugin.FranchiseCollections.Sources;
 using MediaBrowser.Controller.Collections;
 using MediaBrowser.Controller.Entities;
 using MediaBrowser.Controller.Entities.Movies;
@@ -36,8 +37,12 @@ public class FranchiseSyncService
     private readonly IPlaylistManager _playlistManager;
     private readonly IProviderManager _providerManager;
     private readonly IUserManager _userManager;
+    private readonly IUserDataManager _userDataManager;
+    private readonly AaronPerrisMcuSource _mcuSource;
     private readonly ILogger<FranchiseSyncService> _logger;
     private readonly SemaphoreSlim _lock = new(1, 1);
+    private volatile bool _rerunRequested;
+    private volatile HashSet<Guid> _managedItems = new();
 
     public FranchiseSyncService(
         ILibraryManager libraryManager,
@@ -45,6 +50,8 @@ public class FranchiseSyncService
         IPlaylistManager playlistManager,
         IProviderManager providerManager,
         IUserManager userManager,
+        IUserDataManager userDataManager,
+        AaronPerrisMcuSource mcuSource,
         ILogger<FranchiseSyncService> logger)
     {
         _libraryManager = libraryManager;
@@ -52,20 +59,31 @@ public class FranchiseSyncService
         _playlistManager = playlistManager;
         _providerManager = providerManager;
         _userManager = userManager;
+        _userDataManager = userDataManager;
+        _mcuSource = mcuSource;
         _logger = logger;
     }
+
+    /// <summary>Steht dieser Film / diese Folge in einer unserer Playlists? (für das Entfernen gesehener Einträge)</summary>
+    public bool IsManaged(Guid itemId) => _managedItems.Contains(itemId);
 
     public async Task SyncAsync(IProgress<double> progress, CancellationToken cancellationToken)
     {
         if (!await _lock.WaitAsync(0, cancellationToken).ConfigureAwait(false))
         {
-            _logger.LogInformation("Franchise Collections: Synchronisation läuft bereits – übersprungen.");
+            // läuft gerade – danach noch einmal, damit z. B. ein eben gesehener Film sicher verschwindet
+            _rerunRequested = true;
             return;
         }
 
         try
         {
-            await SyncInternalAsync(progress, cancellationToken).ConfigureAwait(false);
+            do
+            {
+                _rerunRequested = false;
+                await SyncInternalAsync(progress, cancellationToken).ConfigureAwait(false);
+            }
+            while (_rerunRequested && !cancellationToken.IsCancellationRequested);
         }
         finally
         {
@@ -91,10 +109,20 @@ public class FranchiseSyncService
             var index = new LibraryIndex(_libraryManager);
             _logger.LogInformation("Franchise Collections: Bibliothek mit {Movies} Filmen und {Series} Serien indiziert.", index.MovieCount, index.SeriesCount);
 
-            var ownerId = ResolvePlaylistOwner(config);
+            var users = ResolvePlaylistUsers(config);
+            var aliases = ParseAliases(config.SeriesAliases);
             var collectionIds = new Dictionary<string, Guid>(StringComparer.OrdinalIgnoreCase);
             var playlistItemsByDef = new Dictionary<string, List<Guid>>(StringComparer.OrdinalIgnoreCase);
+            var mediaIdsByDef = new Dictionary<string, HashSet<Guid>>(StringComparer.OrdinalIgnoreCase);
+            var managed = new HashSet<Guid>();
             var existingBoxSets = LoadExistingBoxSets();
+
+            // Automatische Quellen nur laden, wenn eine aktive Definition sie braucht
+            IReadOnlyList<AaronPerrisMcuSource.GuideItem>? mcuItems = null;
+            if (order.Any(d => d.Entries.Any(e => string.Equals(e.Source, AaronPerrisMcuSource.SourceId, StringComparison.OrdinalIgnoreCase))))
+            {
+                mcuItems = await _mcuSource.GetItemsAsync(plugin.DefinitionsFolder, report.Errors, ct).ConfigureAwait(false);
+            }
 
             for (var i = 0; i < order.Count; i++)
             {
@@ -105,8 +133,10 @@ public class FranchiseSyncService
 
                 try
                 {
-                    var resolved = Resolve(def, index, config, collectionIds, playlistItemsByDef, rep);
+                    var entries = ExpandSources(def, mcuItems, rep, out var sourceFailed);
+                    var resolved = Resolve(def, entries, index, config, aliases, collectionIds, playlistItemsByDef, mediaIdsByDef, rep);
                     playlistItemsByDef[def.Id] = resolved.PlaylistItems;
+                    mediaIdsByDef[def.Id] = resolved.MediaIds;
 
                     if (def.Collection)
                     {
@@ -118,16 +148,25 @@ public class FranchiseSyncService
                         }
                     }
 
-                    if (def.Playlist)
+                    if (def.Playlist && sourceFailed)
                     {
-                        if (ownerId == Guid.Empty)
+                        // Quelle nicht verfügbar → vorhandene Playlists nicht anfassen (nie leeren)
+                        rep.Error = "Quelle nicht verfügbar – Playlists unverändert.";
+                    }
+                    else if (def.Playlist)
+                    {
+                        managed.UnionWith(resolved.PlaylistItems);
+                        if (users.Count == 0)
                         {
                             rep.Error = "Kein Benutzer für die Playlist gefunden.";
                         }
-                        else if (await SyncPlaylistAsync(def, resolved.PlaylistItems, ownerId, config, state, ct).ConfigureAwait(false))
+
+                        foreach (var (userId, user) in users)
                         {
-                            rep.PlaylistItems = resolved.PlaylistItems.Count;
+                            await SyncPlaylistForUserAsync(def, resolved.PlaylistItems, userId, user, config, state, ct).ConfigureAwait(false);
                         }
+
+                        rep.PlaylistItems = resolved.PlaylistItems.Count;
                     }
                 }
                 catch (OperationCanceledException)
@@ -142,6 +181,8 @@ public class FranchiseSyncService
 
                 progress.Report(100.0 * (i + 1) / Math.Max(1, order.Count));
             }
+
+            _managedItems = managed;
         }
         catch (OperationCanceledException)
         {
@@ -177,19 +218,149 @@ public class FranchiseSyncService
         public List<Guid> CollectionItems { get; } = new();
 
         public List<Guid> PlaylistItems { get; } = new();
+
+        /// <summary>Alle Filme und Serien dieser Definition (inkl. Unter-Sammlungen) – für "scope".</summary>
+        public HashSet<Guid> MediaIds { get; } = new();
+    }
+
+    /// <summary>Ersetzt "source"-Einträge durch die Einträge der Quelle und wendet "exclude" an.</summary>
+    private static List<FranchiseEntry> ExpandSources(
+        FranchiseDefinition def,
+        IReadOnlyList<AaronPerrisMcuSource.GuideItem>? mcuItems,
+        DefinitionReport rep,
+        out bool sourceFailed)
+    {
+        sourceFailed = false;
+        var result = new List<FranchiseEntry>();
+        var today = DateOnly.FromDateTime(DateTime.Now);
+
+        foreach (var entry in def.Entries)
+        {
+            if (string.IsNullOrWhiteSpace(entry.Source))
+            {
+                result.Add(entry);
+                continue;
+            }
+
+            if (!string.Equals(entry.Source, AaronPerrisMcuSource.SourceId, StringComparison.OrdinalIgnoreCase))
+            {
+                rep.Missing.Add($"Unbekannte Quelle \"{entry.Source}\"");
+                continue;
+            }
+
+            if (mcuItems is null)
+            {
+                sourceFailed = true;
+                continue;
+            }
+
+            foreach (var generated in AaronPerrisMcuSource.ToEntries(mcuItems, entry.Order, entry.CanonOnly, today))
+            {
+                generated.Scope = entry.Scope;
+                result.Add(generated);
+            }
+        }
+
+        if (def.Exclude.Count == 0)
+        {
+            return result;
+        }
+
+        var rules = def.Exclude.Select(ExcludeRule.Parse).ToList();
+        return result.Where(e => !rules.Any(r => r.Matches(e))).ToList();
+    }
+
+    private sealed class ExcludeRule
+    {
+        private static readonly System.Text.RegularExpressions.Regex CodeAtEnd =
+            new(@"^(?<name>.*?)\s+(?<code>S\d{1,3}(E\d{1,4})?)\s*$", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+
+        private HashSet<string> _keys = new(StringComparer.Ordinal);
+        private int? _season;
+        private int? _episode;
+
+        public static ExcludeRule Parse(string text)
+        {
+            var rule = new ExcludeRule();
+            var name = text;
+            var m = CodeAtEnd.Match(text);
+            if (m.Success)
+            {
+                name = m.Groups["name"].Value;
+                var code = LibraryIndex.ParseCode(m.Groups["code"].Value, true)!.Value;
+                rule._season = code.Season;
+                rule._episode = m.Groups["code"].Value.Contains('E', StringComparison.OrdinalIgnoreCase) ? code.Episode : null;
+            }
+
+            rule._keys = new HashSet<string>(LibraryIndex.NameKeys(name), StringComparer.Ordinal);
+            return rule;
+        }
+
+        public bool Matches(FranchiseEntry e)
+        {
+            var label = e.Title ?? e.Movie ?? e.Series ?? e.Collection ?? string.Empty;
+            if (!LibraryIndex.NameKeys(label).Any(_keys.Contains))
+            {
+                return false;
+            }
+
+            if (_season is null)
+            {
+                return true;
+            }
+
+            // Staffel/Folge kann nur bei einzelnen Folgen (aus Quellen) bzw. einstaffeligen Bereichen geprüft werden
+            var from = LibraryIndex.ParseCode(e.From, true);
+            var to = LibraryIndex.ParseCode(e.To, false);
+            if (from is null || to is null || from.Value.Season != to.Value.Season || from.Value.Season != _season)
+            {
+                return false;
+            }
+
+            return _episode is null || (from.Value.Episode == _episode && to.Value.Episode == _episode);
+        }
+    }
+
+    private static Dictionary<string, string> ParseAliases(string text)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        foreach (var line in (text ?? string.Empty).Split('\n'))
+        {
+            var idx = line.IndexOf('=', StringComparison.Ordinal);
+            if (idx <= 0)
+            {
+                continue;
+            }
+
+            var from = line[..idx].Trim();
+            var to = line[(idx + 1)..].Trim();
+            if (from.Length > 0 && to.Length > 0)
+            {
+                result[LibraryIndex.Normalize(from)] = to;
+            }
+        }
+
+        return result;
     }
 
     private static Resolved Resolve(
         FranchiseDefinition def,
+        List<FranchiseEntry> entries,
         LibraryIndex index,
         PluginConfiguration config,
+        IReadOnlyDictionary<string, string> aliases,
         IReadOnlyDictionary<string, Guid> collectionIds,
         IReadOnlyDictionary<string, List<Guid>> playlistItemsByDef,
+        IReadOnlyDictionary<string, HashSet<Guid>> mediaIdsByDef,
         DefinitionReport rep)
     {
         var result = new Resolved();
         var inCollection = new HashSet<Guid>();
         var inPlaylist = new HashSet<Guid>();
+
+        // fehlende Einträge aus Quellen zusammenfassen ("Agents of S.H.I.E.L.D. – 136 Folgen")
+        var sourceMissing = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        var scopesUsed = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void AddCollection(Guid id, FranchiseEntry e)
         {
@@ -207,8 +378,83 @@ public class FranchiseSyncService
             }
         }
 
-        foreach (var entry in def.Entries)
+        string Alias(string? title)
+            => title is not null && aliases.TryGetValue(LibraryIndex.Normalize(title), out var target) ? target : title ?? string.Empty;
+
+        foreach (var entry in entries)
         {
+            if (entry.FromSource)
+            {
+                HashSet<Guid>? scope = null;
+                if (!string.IsNullOrWhiteSpace(entry.Scope))
+                {
+                    scopesUsed.Add(entry.Scope);
+                    if (!mediaIdsByDef.TryGetValue(entry.Scope, out scope))
+                    {
+                        scope = new HashSet<Guid>();
+                    }
+                }
+
+                if (entry.Movie is not null)
+                {
+                    var movie = index.FindMovie(string.Empty, Alias(entry.Title), entry.Year, allowTitle: true);
+                    if (movie is null)
+                    {
+                        // mit "scope" lässt sich nicht sagen, ob ein unbekannter Titel dazugehört hätte → nicht melden
+                        if (scope is null)
+                        {
+                            sourceMissing[$"{entry.Title} ({entry.Year})"] = 1;
+                        }
+
+                        continue;
+                    }
+
+                    if (scope is not null && !scope.Contains(movie.Id))
+                    {
+                        continue;
+                    }
+
+                    AddCollection(movie.Id, entry);
+                    AddPlaylist(movie.Id, entry);
+                    result.MediaIds.Add(movie.Id);
+                }
+                else
+                {
+                    var series = index.FindSeriesByName(Alias(entry.Title), entry.Year);
+                    if (series is null)
+                    {
+                        if (scope is null)
+                        {
+                            sourceMissing[entry.Title ?? "?"] = sourceMissing.GetValueOrDefault(entry.Title ?? "?") + 1;
+                        }
+
+                        continue;
+                    }
+
+                    if (scope is not null && !scope.Contains(series.Id))
+                    {
+                        continue;
+                    }
+
+                    var episodes = index.GetEpisodes(series, entry.From, entry.To);
+                    if (episodes.Count == 0)
+                    {
+                        var key = $"{series.Name} (Folgen)";
+                        sourceMissing[key] = sourceMissing.GetValueOrDefault(key) + 1;
+                        continue;
+                    }
+
+                    AddCollection(series.Id, entry);
+                    result.MediaIds.Add(series.Id);
+                    foreach (var ep in episodes)
+                    {
+                        AddPlaylist(ep.Id, entry);
+                    }
+                }
+
+                continue;
+            }
+
             rep.EntriesTotal++;
             var found = false;
 
@@ -220,6 +466,7 @@ public class FranchiseSyncService
                 {
                     AddCollection(movie.Id, entry);
                     AddPlaylist(movie.Id, entry);
+                    result.MediaIds.Add(movie.Id);
                     found = true;
                 }
             }
@@ -235,6 +482,7 @@ public class FranchiseSyncService
                     if (!hasRange || episodes.Count > 0)
                     {
                         AddCollection(series.Id, entry);
+                        result.MediaIds.Add(series.Id);
                         foreach (var ep in episodes)
                         {
                             AddPlaylist(ep.Id, entry);
@@ -256,6 +504,7 @@ public class FranchiseSyncService
                 {
                     AddCollection(movie.Id, entry);
                     AddPlaylist(movie.Id, entry);
+                    result.MediaIds.Add(movie.Id);
                 }
 
                 found = movies.Count > 0;
@@ -279,17 +528,23 @@ public class FranchiseSyncService
                     childFound = true;
                 }
 
-                found = childFound;
-                if (!found)
+                if (mediaIdsByDef.TryGetValue(entry.Collection, out var childMedia))
+                {
+                    result.MediaIds.UnionWith(childMedia);
+                }
+
+                if (!childFound)
                 {
                     // Unter-Sammlung ist leer – deren fehlende Einträge stehen bereits im Bericht der Unter-Sammlung
                     rep.EntriesTotal--;
                     continue;
                 }
+
+                found = true;
             }
             else
             {
-                rep.Missing.Add("Ungültiger Eintrag ohne movie/series/tmdbCollection/collection: " + entry.Describe());
+                rep.Missing.Add("Ungültiger Eintrag ohne movie/series/tmdbCollection/collection/source: " + entry.Describe());
                 continue;
             }
 
@@ -300,6 +555,33 @@ public class FranchiseSyncService
             else
             {
                 rep.Missing.Add(entry.Describe());
+            }
+        }
+
+        // Bericht für Quellen
+        var sourcePlaced = result.MediaIds.Count;
+        if (entries.Any(e => e.FromSource))
+        {
+            rep.EntriesFound += sourcePlaced;
+            rep.EntriesTotal += sourcePlaced + sourceMissing.Count;
+            foreach (var (label, count) in sourceMissing.OrderBy(kv => kv.Key, StringComparer.OrdinalIgnoreCase))
+            {
+                rep.Missing.Add(count > 1 ? $"{label} – {count} Folgen" : label);
+            }
+
+            // Was laut "scope" dazugehört, aber in der Quelle nicht gefunden wurde (z. B. Name weicht ab → Alias anlegen)
+            foreach (var scopeId in scopesUsed)
+            {
+                if (!mediaIdsByDef.TryGetValue(scopeId, out var scopeMedia))
+                {
+                    continue;
+                }
+
+                foreach (var id in scopeMedia.Where(id => !result.MediaIds.Contains(id)))
+                {
+                    var name = index.GetName(id);
+                    rep.Missing.Add($"{name} – in \"{scopeId}\", aber nicht in der Quellliste gefunden (ggf. Alias anlegen)");
+                }
             }
         }
 
@@ -325,7 +607,7 @@ public class FranchiseSyncService
                 return;
             }
 
-            foreach (var childId in def.Entries.Where(e => e.Collection is not null).Select(e => e.Collection!))
+            foreach (var childId in def.Entries.Select(e => e.Collection ?? e.Scope).Where(id => id is not null).Select(id => id!))
             {
                 if (defs.TryGetValue(childId, out var child))
                 {
@@ -563,60 +845,85 @@ public class FranchiseSyncService
 
     // ------------------------------------------------------------------ Playlists
 
-    private Guid ResolvePlaylistOwner(PluginConfiguration config)
+    /// <summary>Ausgewählte Benutzer (bzw. der erste Benutzer, wenn keiner ausgewählt ist).</summary>
+    private List<(Guid Id, Jellyfin.Database.Implementations.Entities.User User)> ResolvePlaylistUsers(PluginConfiguration config)
     {
-        if (Guid.TryParse(config.PlaylistOwnerUserId, out var configured) && _userManager.GetUserById(configured) is not null)
+        var result = new List<(Guid, Jellyfin.Database.Implementations.Entities.User)>();
+        foreach (var text in config.PlaylistUserIds ?? Array.Empty<string>())
         {
-            return configured;
+            if (Guid.TryParse(text, out var id) && _userManager.GetUserById(id) is { } user && result.All(r => r.Item1 != id))
+            {
+                result.Add((id, user));
+            }
         }
 
-        var first = _userManager.GetUsers().FirstOrDefault();
-        return first?.Id ?? Guid.Empty;
-    }
-
-    private Playlist? FindPlaylist(FranchiseDefinition def, string name, Guid ownerId, SyncState state)
-    {
-        if (state.Playlists.TryGetValue(def.Id, out var idText)
-            && Guid.TryParse(idText, out var id)
-            && _libraryManager.GetItemById(id) is Playlist byId)
+        if (result.Count == 0 && _userManager.GetUsers().FirstOrDefault() is { } first)
         {
-            return byId;
+            result.Add((first.Id, first));
         }
 
-        return _playlistManager.GetPlaylists(ownerId)
-            .FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        return result;
     }
 
-    private async Task<bool> SyncPlaylistAsync(
+    private Playlist? FindPlaylist(FranchiseDefinition def, string name, Guid userId, SyncState state)
+    {
+        foreach (var key in new[] { $"{def.Id}|{userId:N}", def.Id })
+        {
+            if (state.Playlists.TryGetValue(key, out var idText)
+                && Guid.TryParse(idText, out var id)
+                && _libraryManager.GetItemById(id) is Playlist byId
+                && byId.OwnerUserId == userId)
+            {
+                return byId;
+            }
+        }
+
+        return _playlistManager.GetPlaylists(userId)
+            .FirstOrDefault(p => p.OwnerUserId == userId && string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private async Task SyncPlaylistForUserAsync(
         FranchiseDefinition def,
-        List<Guid> items,
-        Guid ownerId,
+        List<Guid> allItems,
+        Guid userId,
+        Jellyfin.Database.Implementations.Entities.User user,
         PluginConfiguration config,
         SyncState state,
         CancellationToken ct)
     {
+        ct.ThrowIfCancellationRequested();
         var name = string.IsNullOrWhiteSpace(def.PlaylistName) ? $"{def.Name} – Reihenfolge" : def.PlaylistName!;
-        var playlist = FindPlaylist(def, name, ownerId, state);
+        var playlist = FindPlaylist(def, name, userId, state);
 
-        if (items.Count == 0)
+        var items = allItems;
+        if (config.RemoveWatchedFromPlaylists)
         {
-            return false;
+            items = allItems.Where(id =>
+            {
+                var item = _libraryManager.GetItemById(id);
+                return item is null || _userDataManager.GetUserData(user, item)?.Played != true;
+            }).ToList();
         }
 
         if (playlist is null)
         {
-            _logger.LogInformation("Franchise Collections: lege Playlist \"{Name}\" mit {Count} Einträgen an", name, items.Count);
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            _logger.LogInformation("Franchise Collections: lege Playlist \"{Name}\" für {User} an ({Count} Einträge)", name, user.Username, items.Count);
             var created = await _playlistManager.CreatePlaylist(new PlaylistCreationRequest
             {
                 Name = name,
                 ItemIdList = items,
                 MediaType = Jellyfin.Data.Enums.MediaType.Video,
-                UserId = ownerId,
-                Public = config.PlaylistsPublic
+                UserId = userId,
+                Public = false
             }).ConfigureAwait(false);
 
-            state.Playlists[def.Id] = created.Id;
-            return true;
+            state.Playlists[$"{def.Id}|{userId:N}"] = created.Id;
+            return;
         }
 
         var current = playlist.LinkedChildren
@@ -624,24 +931,19 @@ public class FranchiseSyncService
             .Select(c => c.ItemId!.Value)
             .ToList();
 
-        var needsUpdate = !current.SequenceEqual(items)
-                          || !string.Equals(playlist.Name, name, StringComparison.Ordinal)
-                          || playlist.OpenAccess != config.PlaylistsPublic;
-
-        if (needsUpdate)
+        if (!current.SequenceEqual(items) || !string.Equals(playlist.Name, name, StringComparison.Ordinal))
         {
-            _logger.LogInformation("Franchise Collections: aktualisiere Playlist \"{Name}\" ({Count} Einträge)", name, items.Count);
+            _logger.LogInformation("Franchise Collections: aktualisiere Playlist \"{Name}\" für {User} ({Count} Einträge)", name, user.Username, items.Count);
             await _playlistManager.UpdatePlaylist(new PlaylistUpdateRequest
             {
                 Id = playlist.Id,
                 UserId = playlist.OwnerUserId,
                 Name = name,
-                Ids = items,
-                Public = config.PlaylistsPublic
+                Ids = items
             }).ConfigureAwait(false);
         }
 
-        state.Playlists[def.Id] = playlist.Id.ToString("N");
-        return true;
+        state.Playlists.Remove(def.Id);
+        state.Playlists[$"{def.Id}|{userId:N}"] = playlist.Id.ToString("N");
     }
 }

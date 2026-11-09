@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Jellyfin.Plugin.FranchiseCollections.Sources;
 using Jellyfin.Plugin.FranchiseCollections.Sync;
 using MediaBrowser.Controller;
 using MediaBrowser.Controller.Library;
@@ -16,7 +17,9 @@ public class PluginServiceRegistrator : IPluginServiceRegistrator
 {
     public void RegisterServices(IServiceCollection serviceCollection, IServerApplicationHost applicationHost)
     {
+        serviceCollection.AddSingleton<AaronPerrisMcuSource>();
         serviceCollection.AddSingleton<FranchiseSyncService>();
+        serviceCollection.AddHostedService<WatchedListener>();
     }
 }
 

@@ -1,13 +1,12 @@
-// Marvel Cinematic Universe – Phasen 1–6 als Unter-Sammlungen, Reihenfolge = Veröffentlichung
+// Marvel Cinematic Universe – Phasen 1–6 als Unter-Sammlungen + automatisch sortierte Playlists (aaronperris.com/mcu)
 // Serien stehen mit der Staffel in der Phase, in der sie erschienen ist (z. B. Loki S1 in Phase 4, S2 in Phase 5).
 [
   {
     "id": "mcu",
     "name": "Marvel Cinematic Universe",
     "sortName": "Marvel Cinematic Universe",
-    "description": "MCU mit Phase 1–6 als Unter-Sammlungen (Filme + Disney+-Serien) und einer Gesamt-Playlist in Erscheinungsreihenfolge.",
-    "overview": "Das MCU – alle Phasen, Filme und Serien. Die Playlist „Marvel Cinematic Universe – Reihenfolge“ enthält alles in Erscheinungsreihenfolge.",
-    "playlist": true,
+    "description": "MCU mit Phase 1–6 als Unter-Sammlungen (Filme + Disney+-Serien).",
+    "overview": "Das MCU – alle Phasen, Filme und Serien.",
     "displayOrder": "SortName",
     "entries": [
       { "collection": "mcu-phase-1" },
@@ -16,6 +15,40 @@
       { "collection": "mcu-phase-4" },
       { "collection": "mcu-phase-5" },
       { "collection": "mcu-phase-6" }
+    ]
+  },
+  {
+    "id": "mcu-erscheinung",
+    "name": "MCU – Erscheinungsreihenfolge",
+    "description": "Playlist: alles aus der MCU-Sammlung in Erscheinungsreihenfolge, folgengenau (z. B. Loki S1 und Black Widow abwechselnd, wie sie erschienen sind). Reihenfolge automatisch von aaronperris.com/mcu.",
+    "collection": false,
+    "playlist": true,
+    "playlistName": "MCU – Erscheinungsreihenfolge",
+    "entries": [
+      { "source": "aaronperris-mcu", "order": "release", "scope": "mcu" }
+    ]
+  },
+  {
+    "id": "mcu-chronologisch",
+    "name": "MCU – Chronologisch",
+    "description": "Playlist: alles aus der MCU-Sammlung in der Reihenfolge der Handlung (Captain America: The First Avenger zuerst …), folgengenau. Reihenfolge automatisch von aaronperris.com/mcu.",
+    "collection": false,
+    "playlist": true,
+    "playlistName": "MCU – Chronologisch",
+    "entries": [
+      { "source": "aaronperris-mcu", "order": "chronological", "scope": "mcu" }
+    ]
+  },
+  {
+    "id": "marvel-multiversum",
+    "name": "Marvel-Multiversum – Chronologisch",
+    "description": "Playlist: ALLES, was aaronperris.com als Kanon führt – auch Fox-X-Men, Sony-Spider-Man, Netflix-Serien, Blade … – chronologisch. Standardmäßig aus.",
+    "defaultEnabled": false,
+    "collection": false,
+    "playlist": true,
+    "playlistName": "Marvel-Multiversum – Chronologisch",
+    "entries": [
+      { "source": "aaronperris-mcu", "order": "chronological" }
     ]
   },
   {

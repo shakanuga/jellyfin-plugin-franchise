@@ -49,15 +49,18 @@
                 <div class="verticalSection fc-section">
                     <h3 class="sectionTitle">Einstellungen</h3>
 
-                    <div class="selectContainer">
-                        <select is="emby-select" id="fcPlaylistOwner" label="Besitzer der Watch-Order-Playlists"></select>
+                    <div class="fc-section" style="margin-top:0">
+                        <div style="margin-bottom:.4em">Benutzer, die eigene Watch-Order-Playlists bekommen:</div>
+                        <div id="fcUsers"></div>
+                        <div class="fieldDescription">Jeder ausgewählte Benutzer bekommt seine eigene Kopie. Keiner ausgewählt = nur der erste Benutzer.</div>
                     </div>
 
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label>
-                            <input is="emby-checkbox" type="checkbox" id="fcPlaylistsPublic" />
-                            <span>Playlists für alle Benutzer sichtbar</span>
+                            <input is="emby-checkbox" type="checkbox" id="fcRemoveWatched" />
+                            <span>Gesehenes aus den Playlists entfernen</span>
                         </label>
+                        <div class="fieldDescription checkboxFieldDescription">Oben steht dann immer das Nächste – einfach Playlist abspielen und weiterschauen. Als ungesehen markieren bringt es zurück.</div>
                     </div>
 
                     <div class="checkboxContainer checkboxContainer-withDescription">
@@ -83,6 +86,13 @@
                         </label>
                         <div class="fieldDescription checkboxFieldDescription">Normalerweise wird eine Sammlung erst angelegt, wenn mindestens ein Titel davon in der Bibliothek ist.</div>
                     </div>
+                </div>
+
+                <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Namens-Zuordnungen für automatische Listen</h3>
+                    <p style="opacity:.8">Nur nötig, wenn eine Serie aus der MCU-Liste nicht erkannt wird (steht im Bericht). Eine pro Zeile:
+                        <code>Name in der Liste = Name in Jellyfin</code></p>
+                    <textarea id="fcAliases" class="fc-json" style="min-height:5em" spellcheck="false" placeholder="Daredevil = Marvel's Daredevil"></textarea>
                 </div>
 
                 <div class="verticalSection fc-section">
@@ -158,6 +168,7 @@
                         '<span>' + esc(b.Name) + '</span></label>' +
                         (b.Description ? '<div class="fc-desc">' + esc(b.Description) + '</div>' : '') +
                         (via ? '<div class="fc-via">aktiv über „' + esc(via) + '“</div>' : '') +
+                        '<div class="fc-desc"><a href="#" class="fcCopy" data-id="' + esc(b.Id) + '">Als eigene Kopie bearbeiten</a></div>' +
                         '</div>';
                 }).join('');
                 page.querySelector('#fcBuiltIns').innerHTML = html || '<p>Keine mitgelieferten Definitionen gefunden.</p>';
@@ -190,19 +201,16 @@
                 el.innerHTML = html;
             }
 
+            function normId(id) { return String(id || '').replace(/-/g, '').toLowerCase(); }
+
             function loadUsers(config) {
                 return ApiClient.getUsers().then(function (users) {
-                    var select = page.querySelector('#fcPlaylistOwner');
-                    select.innerHTML = '<option value="">(erster Benutzer)</option>' + users.map(function (u) {
-                        return '<option value="' + esc(u.Id) + '">' + esc(u.Name) + '</option>';
+                    var selected = (config.PlaylistUserIds || []).map(normId);
+                    page.querySelector('#fcUsers').innerHTML = users.map(function (u) {
+                        var checked = selected.indexOf(normId(u.Id)) >= 0 ? ' checked' : '';
+                        return '<label class="checkboxContainer" style="margin:.2em 0"><input is="emby-checkbox" type="checkbox" class="fcUser" data-id="' +
+                            esc(u.Id) + '"' + checked + ' /><span>' + esc(u.Name) + '</span></label>';
                     }).join('');
-                    select.value = (config.PlaylistOwnerUserId || '').replace(/-/g, '');
-                    if (select.value === '' && config.PlaylistOwnerUserId) {
-                        // IDs können mit oder ohne Bindestriche kommen
-                        Array.prototype.forEach.call(select.options, function (o) {
-                            if (o.value.replace(/-/g, '').toLowerCase() === config.PlaylistOwnerUserId.replace(/-/g, '').toLowerCase()) select.value = o.value;
-                        });
-                    }
                 });
             }
 
@@ -210,7 +218,8 @@
                 Dashboard.showLoadingMsg();
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     currentConfig = config;
-                    page.querySelector('#fcPlaylistsPublic').checked = !!config.PlaylistsPublic;
+                    page.querySelector('#fcRemoveWatched').checked = !!config.RemoveWatchedFromPlaylists;
+                    page.querySelector('#fcAliases').value = config.SeriesAliases || '';
                     page.querySelector('#fcSyncAfterScan').checked = !!config.SyncAfterLibraryScan;
                     page.querySelector('#fcMatchByTitle').checked = !!config.MatchByTitleAndYear;
                     page.querySelector('#fcCreateEmpty').checked = !!config.CreateEmptyCollections;
@@ -246,11 +255,13 @@
             }
 
             function collectConfig(config) {
-                config.PlaylistsPublic = page.querySelector('#fcPlaylistsPublic').checked;
+                config.RemoveWatchedFromPlaylists = page.querySelector('#fcRemoveWatched').checked;
+                config.SeriesAliases = page.querySelector('#fcAliases').value;
+                config.PlaylistUserIds = Array.prototype.map.call(
+                    page.querySelectorAll('.fcUser:checked'), function (c) { return c.getAttribute('data-id'); });
                 config.SyncAfterLibraryScan = page.querySelector('#fcSyncAfterScan').checked;
                 config.MatchByTitleAndYear = page.querySelector('#fcMatchByTitle').checked;
                 config.CreateEmptyCollections = page.querySelector('#fcCreateEmpty').checked;
-                config.PlaylistOwnerUserId = page.querySelector('#fcPlaylistOwner').value || '';
                 config.CustomDefinitionsJson = page.querySelector('#fcCustomJson').value;
                 config.EnabledBuiltIns = Array.prototype.map.call(
                     page.querySelectorAll('.fcBuiltIn:checked'), function (c) { return c.getAttribute('data-id'); });
@@ -310,6 +321,33 @@
                 if (ta.value.trim() && !confirm('Vorhandenen Inhalt ersetzen?')) return;
                 ta.value = example;
                 validateJson();
+            });
+
+            page.querySelector('#fcBuiltIns').addEventListener('click', function (e) {
+                var link = e.target.closest('.fcCopy');
+                if (!link || !currentConfig) return;
+                e.preventDefault();
+                var b = (currentConfig.BuiltInCatalog || []).filter(function (x) { return x.Id === link.getAttribute('data-id'); })[0];
+                if (!b || !b.Json) return;
+                var ta = page.querySelector('#fcCustomJson');
+                var list = [];
+                var text = ta.value.trim();
+                if (text) {
+                    try {
+                        var parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ''));
+                        list = Array.isArray(parsed) ? parsed : (parsed.definitions || [parsed]);
+                    } catch (err) {
+                        page.querySelector('#fcJsonError').textContent = 'Das JSON-Feld enthält einen Fehler – bitte erst korrigieren.';
+                        return;
+                    }
+                }
+                var def = JSON.parse(b.Json);
+                list = list.filter(function (d) { return d.id !== def.id; });
+                list.push(def);
+                ta.value = JSON.stringify(list, null, 2);
+                validateJson();
+                ta.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                Dashboard.alert('„' + b.Name + '“ steht jetzt im JSON-Feld. Gleiche ID = deine Kopie ersetzt die mitgelieferte. Nach dem Ändern speichern.');
             });
 
             page.querySelector('#fcBuiltIns').addEventListener('change', function () {

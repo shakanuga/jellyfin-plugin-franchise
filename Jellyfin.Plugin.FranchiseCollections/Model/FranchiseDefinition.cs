@@ -14,6 +14,9 @@ public class FranchiseDefinition
     /// <summary>Anzeigename der Sammlung.</summary>
     public string Name { get; set; } = string.Empty;
 
+    /// <summary>Mitgelieferte Definition beim ersten Start (bzw. wenn sie neu dazukommt) automatisch aktivieren.</summary>
+    public bool DefaultEnabled { get; set; } = true;
+
     /// <summary>Kurzbeschreibung für die Einstellungsseite.</summary>
     public string? Description { get; set; }
 
@@ -46,6 +49,12 @@ public class FranchiseDefinition
 
     /// <summary>Einträge in Schau-Reihenfolge.</summary>
     public List<FranchiseEntry> Entries { get; set; } = new();
+
+    /// <summary>
+    /// Kleine Korrekturen ohne die ganze Liste zu kopieren: Titel ("Werewolf by Night"), Serien ("Agents of S.H.I.E.L.D.")
+    /// oder einzelne Folgen/Staffeln ("Loki S02", "What If...? S01E09"), die weggelassen werden.
+    /// </summary>
+    public List<string> Exclude { get; set; } = new();
 }
 
 /// <summary>
@@ -72,6 +81,24 @@ public class FranchiseEntry
     /// <summary>ID einer anderen Definition → wird als Unter-Sammlung eingehängt; in der Playlist wird ihre Reihenfolge übernommen.</summary>
     public string? Collection { get; set; }
 
+    /// <summary>
+    /// Automatische Quelle, die beim Synchronisieren geladen wird und sich selbst in Einträge auflöst.
+    /// Aktuell: "aaronperris-mcu" (https://aaronperris.com/mcu/ – MCU inkl. Disney+-/Netflix-Serien, folgengenau).
+    /// </summary>
+    public string? Source { get; set; }
+
+    /// <summary>Reihenfolge der Quelle: "release" (Erscheinen), "chronological" oder "sacred" (Sacred Timeline).</summary>
+    public string? Order { get; set; }
+
+    /// <summary>Nur Kanon-Titel der Quelle (Standard: ja). Nein = auch Werbespots, alte Zeichentrickserien usw.</summary>
+    public bool CanonOnly { get; set; } = true;
+
+    /// <summary>
+    /// Nur Titel übernehmen, die auch in dieser anderen Definition stecken (z. B. "mcu").
+    /// So bestimmt die Quelle nur die Reihenfolge, und was dazugehört, bestimmt die Sammlung.
+    /// </summary>
+    public string? Scope { get; set; }
+
     /// <summary>Titel (Originaltitel) – für den Bericht und als Rückfallebene beim Abgleich.</summary>
     public string? Title { get; set; }
 
@@ -87,11 +114,16 @@ public class FranchiseEntry
     /// <summary>Nur in der Sammlung, nicht in der Playlist.</summary>
     public bool CollectionOnly { get; set; }
 
+    /// <summary>Intern: Eintrag wurde aus einer automatischen Quelle erzeugt (Abgleich nur über Namen).</summary>
+    [System.Text.Json.Serialization.JsonIgnore]
+    public bool FromSource { get; set; }
+
     public string Describe()
     {
         var label = Title
-            ?? Movie
-            ?? Series
+            ?? (string.IsNullOrEmpty(Movie) ? null : Movie)
+            ?? (string.IsNullOrEmpty(Series) ? null : Series)
+            ?? (Source is not null ? "Quelle " + Source : null)
             ?? (TmdbCollection is not null ? "TMDb-Collection " + TmdbCollection : null)
             ?? Collection
             ?? "?";

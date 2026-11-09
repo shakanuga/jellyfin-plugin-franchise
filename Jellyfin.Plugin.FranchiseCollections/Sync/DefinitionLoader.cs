@@ -136,7 +136,7 @@ public static class DefinitionLoader
         while (queue.Count > 0)
         {
             var def = queue.Dequeue();
-            foreach (var childId in def.Entries.Where(e => e.Collection is not null).Select(e => e.Collection!))
+            foreach (var childId in def.Entries.Select(e => e.Collection ?? e.Scope).Where(id => id is not null).Select(id => id!))
             {
                 if (!all.ContainsKey(childId) && builtInById.Value.TryGetValue(childId, out var child))
                 {

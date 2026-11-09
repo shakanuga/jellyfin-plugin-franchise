@@ -1,46 +1,63 @@
 # Franchise Collections – Jellyfin-Plugin
 
 Legt große, verschachtelte Sammlungen mit **Filmen und Serien** an (z. B. *Marvel → MCU → Phase 1–6*)
-und optional eine **Watch-Order-Playlist**, in der Filme genau zwischen den richtigen Staffeln/Folgen stehen
+und **Watch-Order-Playlists**, in denen Filme genau zwischen den richtigen Staffeln/Folgen stehen
 (z. B. *Akte X: Staffel 1–5 → Der Film → Staffel 6–9 …*).
 
-Mitgeliefert: **Marvel** (inkl. MCU mit 6 Phasen, X-Men/Deadpool, Spider-Man/Sony, Netflix-/ABC-Serien),
-**Star Trek** (alle Serien + Filme) und **Akte X**.
+Alles sind ganz normale Jellyfin-Sammlungen und -Playlists – funktioniert also in **jeder** App
+(Browser, Wholphin, Android TV, Handy …), ohne Zusatz-Plugins oder eingeschleustes JavaScript.
 
-## Bauen
+Mitgeliefert:
 
-Auf dem Unraid-Server (oder überall mit Docker) – es muss kein .NET installiert sein:
+- **Marvel** – MCU mit Phase 1–6, X-Men/Deadpool, Spider-Man (Sony), Netflix-/ABC-Serien
+- **MCU – Erscheinungsreihenfolge** und **MCU – Chronologisch** – Playlists, folgengenau,
+  **automatisch sortiert** nach [aaronperris.com/mcu](https://aaronperris.com/mcu/). Neue Filme/Serien
+  sortieren sich von selbst ein, sobald sie dort und in deiner Bibliothek sind.
+- **Marvel-Multiversum – Chronologisch** (standardmäßig aus) – inkl. Fox, Sony, Netflix, Blade …
+- **Star Trek** (alle Serien + Filme) und **Akte X**
+
+## Installieren (über den Katalog – mit Updates)
+
+1. *Dashboard → Plugins → Repositories → +*
+   - Name: `Franchise Collections`
+   - URL: `https://github.com/shakanuga/jellyfin-plugin-franchise/releases/latest/download/manifest.json`
+2. *Dashboard → Plugins → Katalog → Franchise Collections → Installieren*, Jellyfin neu starten.
+3. *Dashboard → Plugins → Franchise Collections*: Benutzer für die Playlists auswählen, speichern,
+   **Jetzt synchronisieren**. Danach läuft es nach jedem Bibliotheks-Scan von selbst.
+
+Neue Versionen erscheinen dann automatisch im Dashboard.
+
+Benötigt **Jellyfin 12.x**. (Für 10.11 gibt es unter *Actions* einen Test-Build zum Installieren von Hand.)
+
+## Neue Version veröffentlichen
 
 ```bash
-./build.sh          # Jellyfin 12.x (Standard)
-./build.sh 10.11    # Jellyfin 10.11
+git tag v0.2.1 -m "Was sich geändert hat"
+git push origin v0.2.1
 ```
 
-Ergebnis: `dist/FranchiseCollections_0.1.0.0/` mit DLL und `meta.json`.
-
-Alternativ ins eigene GitHub-Repo pushen – die Action unter `.github/workflows/build.yml` baut die DLL für Jellyfin 12.x und 10.11
-und stellt sie als Download (Artifact) bereit.
-
-## Installieren
-
-1. Jellyfin stoppen.
-2. Den Ordner `FranchiseCollections_0.1.0.0` in den Plugin-Ordner von Jellyfin kopieren, also dorthin, wo
-   schon andere Plugins liegen (z. B. der TheTVDB-Ordner):
-   - offizielles Image `jellyfin/jellyfin`: `appdata/jellyfin/config/plugins/` bzw. `/config/plugins/`
-   - linuxserver-Image: `appdata/jellyfin/data/plugins/`
-3. Jellyfin starten → *Dashboard → Plugins → Franchise Collections*.
-4. *Jetzt synchronisieren* klicken. Danach läuft es nach jedem Bibliotheks-Scan automatisch.
+Die Action *Release* baut das Plugin, erstellt das GitHub-Release und das Katalog-Manifest.
 
 ## Was passiert
 
-- **Sammlungen** werden im normalen Bereich „Sammlungen“ angelegt. Unter-Sammlungen (Phasen) stecken in der
-  übergeordneten Sammlung, tauchen aber – so ist Jellyfin gebaut – auch einzeln in der Sammlungsübersicht auf.
+- **Sammlungen** erscheinen im normalen Bereich „Sammlungen“. Unter-Sammlungen (Phasen) stecken in der
+  übergeordneten Sammlung, tauchen aber – so ist Jellyfin gebaut – auch einzeln in der Übersicht auf.
 - Eine Sammlung wird erst angelegt, wenn mindestens ein Titel davon in der Bibliothek ist.
-- Kommt ein neuer Film/eine neue Staffel dazu, wird er beim nächsten Lauf einsortiert.
-- **Playlists** heißen „<Name> – Reihenfolge“ und gehören dem eingestellten Benutzer (standardmäßig für alle sichtbar).
-  Serien werden darin in einzelne Folgen aufgelöst; fehlende Folgen werden übersprungen.
-- Der **Bericht** auf der Einstellungsseite zeigt pro Sammlung, was noch in der Bibliothek fehlt.
-- Eigene, von Hand angelegte Sammlungen werden nie angefasst (das Plugin erkennt seine eigenen an einer Markierung).
+- **Playlists** bekommt jeder ausgewählte Benutzer als eigene Kopie. Ist *Gesehenes entfernen* an (Standard),
+  verschwindet ein Film/eine Folge ca. 20 Sekunden nach dem Zu-Ende-Schauen – oben steht immer das Nächste,
+  einfach die Playlist abspielen. „Als ungesehen markieren“ bringt es zurück.
+- Die automatischen MCU-Playlists nehmen nur, was auch in der MCU-Sammlung steckt („scope“) – die Liste von
+  aaronperris.com bestimmt nur die **Reihenfolge**. Ist die Seite mal nicht erreichbar, wird die zuletzt
+  geladene Kopie benutzt; ohne Kopie bleiben die Playlists unverändert (werden nie geleert).
+- Der **Bericht** auf der Einstellungsseite zeigt pro Sammlung, was noch fehlt.
+- Eigene, von Hand angelegte Sammlungen werden nie angefasst.
+
+## Kleinigkeiten korrigieren
+
+- **Etwas soll raus:** bei einer mitgelieferten Sammlung *Als eigene Kopie bearbeiten* klicken und ein
+  `"exclude"` ergänzen, z. B. `"exclude": ["Werewolf by Night", "What If...? S02", "Loki S01E03"]`.
+- **Eine Serie wird nicht erkannt:** im Feld *Namens-Zuordnungen* eintragen, z. B. `Daredevil = Marvel's Daredevil`.
+- **Reihenfolge/Inhalt ändern:** *Als eigene Kopie bearbeiten* – deine Kopie (gleiche `id`) ersetzt die mitgelieferte.
 
 ## Bilder
 
@@ -85,6 +102,7 @@ Eintragsarten:
 | `"movie": "imdb:tt…"` | ein Film. Mehrere IDs mit `\|` trennen: `"imdb:tt0120902\|tmdb:846"` |
 | `"series": "tvdb:…"` | eine Serie, optional mit `"from": "S06"` / `"to": "S05E20"` |
 | `"tmdbCollection": "263"` | alle Filme einer TMDb-Collection, die du hast (nach Datum) |
+| `"source": "aaronperris-mcu"` | automatische MCU-Liste; dazu `"order": "release"` / `"chronological"` / `"sacred"`, optional `"scope": "mcu"` (nur was in dieser Sammlung ist) und `"canonOnly": false` |
 | `"collection": "andere-id"` | andere Definition als Unter-Sammlung; in der Playlist wird ihre Reihenfolge übernommen |
 | `"title"`, `"year"` | Originaltitel + Jahr: für den Bericht und als Rückfallebene, wenn keine ID passt (`"movie": ""` = nur über Titel suchen) |
 | `"playlistOnly"` / `"collectionOnly"` | Eintrag nur in Playlist bzw. nur in Sammlung |
@@ -92,6 +110,8 @@ Eintragsarten:
 IDs: `imdb:`, `tmdb:`, `tvdb:` – genau so, wie sie in Jellyfin bei *Metadaten bearbeiten → Externe IDs* stehen.
 Folgen werden nach der Staffel-/Folgennummerierung in Jellyfin gezählt (bei dir TheTVDB), Specials (Staffel 0) nur,
 wenn ein Bereich ausdrücklich in `S00` beginnt.
+
+Auf Definitionsebene gibt es außerdem `"exclude": [...]` (siehe oben) und `"defaultEnabled": false`.
 
 ## Grenzen
 

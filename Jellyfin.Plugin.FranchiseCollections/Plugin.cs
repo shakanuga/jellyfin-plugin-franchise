@@ -47,19 +47,29 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
                     IncludedBy = builtIns
                         .Where(p => p.Entries.Any(e => string.Equals(e.Collection, d.Id, StringComparison.OrdinalIgnoreCase)))
                         .Select(p => p.Id)
-                        .ToArray()
+                        .ToArray(),
+                    Json = System.Text.Json.JsonSerializer.Serialize(d, PrettyJson)
                 })
                 .ToArray();
 
-            if (!config.BuiltInsInitialized)
+            // Beim ersten Start – und wenn mit einem Update neue mitgelieferte Definitionen dazukommen – die "obersten"
+            // aktivieren. Unter-Sammlungen werden automatisch mitgenommen.
+            var children = new HashSet<string>(
+                builtIns.SelectMany(d => d.Entries).Where(e => e.Collection is not null).Select(e => e.Collection!),
+                StringComparer.OrdinalIgnoreCase);
+            var known = new HashSet<string>(config.BuiltInsInitialized ? config.KnownBuiltIns : Array.Empty<string>(), StringComparer.OrdinalIgnoreCase);
+            var enabled = new List<string>(config.BuiltInsInitialized ? config.EnabledBuiltIns : Array.Empty<string>());
+            foreach (var def in builtIns.Where(d => !known.Contains(d.Id)))
             {
-                // Beim ersten Start nur die "obersten" Definitionen aktivieren – Unter-Sammlungen werden automatisch mitgenommen.
-                var children = new HashSet<string>(
-                    builtIns.SelectMany(d => d.Entries).Where(e => e.Collection is not null).Select(e => e.Collection!),
-                    StringComparer.OrdinalIgnoreCase);
-                config.EnabledBuiltIns = builtIns.Where(d => !children.Contains(d.Id)).Select(d => d.Id).ToArray();
-                config.BuiltInsInitialized = true;
+                if (def.DefaultEnabled && !children.Contains(def.Id) && !enabled.Contains(def.Id, StringComparer.OrdinalIgnoreCase))
+                {
+                    enabled.Add(def.Id);
+                }
             }
+
+            config.EnabledBuiltIns = enabled.ToArray();
+            config.KnownBuiltIns = builtIns.Select(d => d.Id).ToArray();
+            config.BuiltInsInitialized = true;
 
             SaveConfiguration();
         }
@@ -68,6 +78,14 @@ public class Plugin : BasePlugin<PluginConfiguration>, IHasWebPages
             // Darf den Start von Jellyfin nie verhindern.
         }
     }
+
+    private static readonly System.Text.Json.JsonSerializerOptions PrettyJson = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
 
     public static Plugin? Instance { get; private set; }
 
