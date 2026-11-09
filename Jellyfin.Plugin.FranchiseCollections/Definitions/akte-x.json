@@ -1,0 +1,16 @@
+// Akte X – Serie und beide Filme, Playlist in der richtigen Reihenfolge
+{
+  "id": "akte-x",
+  "name": "Akte X",
+  "description": "Serie + beide Filme. Playlist: Staffel 1–5 → Der Film → Staffel 6–9 → I Want to Believe → Staffel 10–11.",
+  "overview": "Mulder und Scully – alle Staffeln und beide Kinofilme. Die Playlist „Akte X – Reihenfolge“ zeigt, wann welcher Film dran ist.",
+  "playlist": true,
+  "displayOrder": "PremiereDate",
+  "entries": [
+    { "series": "imdb:tt0106179|tvdb:77398|tmdb:4087", "title": "The X-Files", "year": 1993, "to": "S05" },
+    { "movie": "imdb:tt0120902|tmdb:846", "title": "The X-Files", "year": 1998, "note": "Akte X – Der Film: nach Staffel 5, vor Staffel 6" },
+    { "series": "imdb:tt0106179|tvdb:77398|tmdb:4087", "title": "The X-Files", "year": 1993, "from": "S06", "to": "S09" },
+    { "movie": "imdb:tt0443701|tmdb:8836", "title": "The X-Files: I Want to Believe", "year": 2008 },
+    { "series": "imdb:tt0106179|tvdb:77398|tmdb:4087", "title": "The X-Files", "year": 1993, "from": "S10" }
+  ]
+}

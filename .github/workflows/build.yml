@@ -1,0 +1,37 @@
+name: Build
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - jellyfin: "10.11"
+            tfm: net9.0
+            sdk: "9.0.x"
+          - jellyfin: "10.10"
+            tfm: net8.0
+            sdk: "8.0.x"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ matrix.sdk }}
+      - name: Build
+        run: |
+          VERSION=$(grep -oP '(?<=<AssemblyVersion>)[^<]+' Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj)
+          dotnet publish Jellyfin.Plugin.FranchiseCollections/Jellyfin.Plugin.FranchiseCollections.csproj \
+            -c Release -o build -p:TargetFramework=${{ matrix.tfm }} -p:JellyfinVersion="${{ matrix.jellyfin }}.*"
+          OUT="FranchiseCollections_${VERSION}"
+          mkdir -p "$OUT"
+          cp build/Jellyfin.Plugin.FranchiseCollections.dll "$OUT/"
+          sed -e "s/__VERSION__/${VERSION}/" -e "s/__ABI__/${{ matrix.jellyfin }}.0.0/" meta.json > "$OUT/meta.json"
+          echo "OUT=$OUT" >> "$GITHUB_ENV"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FranchiseCollections-jellyfin-${{ matrix.jellyfin }}
+          path: ${{ env.OUT }}

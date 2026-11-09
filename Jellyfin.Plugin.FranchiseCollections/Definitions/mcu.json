@@ -1,0 +1,127 @@
+// Marvel Cinematic Universe – Phasen 1–6 als Unter-Sammlungen, Reihenfolge = Veröffentlichung
+// Serien stehen mit der Staffel in der Phase, in der sie erschienen ist (z. B. Loki S1 in Phase 4, S2 in Phase 5).
+[
+  {
+    "id": "mcu",
+    "name": "Marvel Cinematic Universe",
+    "sortName": "Marvel Cinematic Universe",
+    "description": "MCU mit Phase 1–6 als Unter-Sammlungen (Filme + Disney+-Serien) und einer Gesamt-Playlist in Erscheinungsreihenfolge.",
+    "overview": "Das MCU – alle Phasen, Filme und Serien. Die Playlist „Marvel Cinematic Universe – Reihenfolge“ enthält alles in Erscheinungsreihenfolge.",
+    "playlist": true,
+    "displayOrder": "SortName",
+    "entries": [
+      { "collection": "mcu-phase-1" },
+      { "collection": "mcu-phase-2" },
+      { "collection": "mcu-phase-3" },
+      { "collection": "mcu-phase-4" },
+      { "collection": "mcu-phase-5" },
+      { "collection": "mcu-phase-6" }
+    ]
+  },
+  {
+    "id": "mcu-phase-1",
+    "name": "MCU – Phase 1",
+    "sortName": "MCU Phase 1",
+    "description": "2008–2012: Iron Man bis The Avengers",
+    "entries": [
+      { "movie": "imdb:tt0371746", "title": "Iron Man", "year": 2008 },
+      { "movie": "imdb:tt0800080", "title": "The Incredible Hulk", "year": 2008 },
+      { "movie": "imdb:tt1228705", "title": "Iron Man 2", "year": 2010 },
+      { "movie": "imdb:tt0800369", "title": "Thor", "year": 2011 },
+      { "movie": "imdb:tt0458339", "title": "Captain America: The First Avenger", "year": 2011 },
+      { "movie": "imdb:tt0848228", "title": "The Avengers", "year": 2012 }
+    ]
+  },
+  {
+    "id": "mcu-phase-2",
+    "name": "MCU – Phase 2",
+    "sortName": "MCU Phase 2",
+    "description": "2013–2015: Iron Man 3 bis Ant-Man",
+    "entries": [
+      { "movie": "imdb:tt1300854", "title": "Iron Man 3", "year": 2013 },
+      { "movie": "imdb:tt1981115", "title": "Thor: The Dark World", "year": 2013 },
+      { "movie": "imdb:tt1843866", "title": "Captain America: The Winter Soldier", "year": 2014 },
+      { "movie": "imdb:tt2015381", "title": "Guardians of the Galaxy", "year": 2014 },
+      { "movie": "imdb:tt2395427", "title": "Avengers: Age of Ultron", "year": 2015 },
+      { "movie": "imdb:tt0478970", "title": "Ant-Man", "year": 2015 }
+    ]
+  },
+  {
+    "id": "mcu-phase-3",
+    "name": "MCU – Phase 3",
+    "sortName": "MCU Phase 3",
+    "description": "2016–2019: Civil War bis Far From Home",
+    "entries": [
+      { "movie": "imdb:tt3498820", "title": "Captain America: Civil War", "year": 2016 },
+      { "movie": "imdb:tt1211837", "title": "Doctor Strange", "year": 2016 },
+      { "movie": "imdb:tt3896198", "title": "Guardians of the Galaxy Vol. 2", "year": 2017 },
+      { "movie": "imdb:tt2250912", "title": "Spider-Man: Homecoming", "year": 2017 },
+      { "movie": "imdb:tt3501632", "title": "Thor: Ragnarok", "year": 2017 },
+      { "movie": "imdb:tt1825683", "title": "Black Panther", "year": 2018 },
+      { "movie": "imdb:tt4154756", "title": "Avengers: Infinity War", "year": 2018 },
+      { "movie": "imdb:tt5095030", "title": "Ant-Man and the Wasp", "year": 2018 },
+      { "movie": "imdb:tt4154664", "title": "Captain Marvel", "year": 2019 },
+      { "movie": "imdb:tt4154796", "title": "Avengers: Endgame", "year": 2019 },
+      { "movie": "imdb:tt6320628", "title": "Spider-Man: Far From Home", "year": 2019 }
+    ]
+  },
+  {
+    "id": "mcu-phase-4",
+    "name": "MCU – Phase 4",
+    "sortName": "MCU Phase 4",
+    "description": "2021–2022: WandaVision bis Wakanda Forever",
+    "entries": [
+      { "series": "imdb:tt9140560", "title": "WandaVision", "year": 2021 },
+      { "series": "imdb:tt9208876", "title": "The Falcon and the Winter Soldier", "year": 2021 },
+      { "series": "imdb:tt9140554", "title": "Loki", "year": 2021, "to": "S01" },
+      { "movie": "imdb:tt3480822", "title": "Black Widow", "year": 2021 },
+      { "series": "imdb:tt10168312", "title": "What If...?", "year": 2021, "to": "S01" },
+      { "movie": "imdb:tt9376612", "title": "Shang-Chi and the Legend of the Ten Rings", "year": 2021 },
+      { "movie": "imdb:tt9032400", "title": "Eternals", "year": 2021 },
+      { "series": "imdb:tt10160804", "title": "Hawkeye", "year": 2021 },
+      { "movie": "imdb:tt10872600", "title": "Spider-Man: No Way Home", "year": 2021 },
+      { "series": "imdb:tt10234724", "title": "Moon Knight", "year": 2022 },
+      { "movie": "imdb:tt9419884", "title": "Doctor Strange in the Multiverse of Madness", "year": 2022 },
+      { "series": "imdb:tt10857164", "title": "Ms. Marvel", "year": 2022 },
+      { "movie": "imdb:tt10648342", "title": "Thor: Love and Thunder", "year": 2022 },
+      { "series": "imdb:tt10857160", "title": "She-Hulk: Attorney at Law", "year": 2022 },
+      { "movie": "", "title": "Werewolf by Night", "year": 2022 },
+      { "movie": "imdb:tt9114286", "title": "Black Panther: Wakanda Forever", "year": 2022 },
+      { "movie": "", "title": "The Guardians of the Galaxy Holiday Special", "year": 2022 }
+    ]
+  },
+  {
+    "id": "mcu-phase-5",
+    "name": "MCU – Phase 5",
+    "sortName": "MCU Phase 5",
+    "description": "2023–2025: Quantumania bis Ironheart",
+    "entries": [
+      { "movie": "imdb:tt10954600", "title": "Ant-Man and the Wasp: Quantumania", "year": 2023 },
+      { "movie": "imdb:tt6791350", "title": "Guardians of the Galaxy Vol. 3", "year": 2023 },
+      { "series": "imdb:tt13157618", "title": "Secret Invasion", "year": 2023 },
+      { "series": "imdb:tt9140554", "title": "Loki", "year": 2021, "from": "S02" },
+      { "movie": "imdb:tt10676048", "title": "The Marvels", "year": 2023 },
+      { "series": "imdb:tt10168312", "title": "What If...?", "year": 2021, "from": "S02" },
+      { "series": "imdb:tt13966962", "title": "Echo", "year": 2024 },
+      { "movie": "imdb:tt6263850", "title": "Deadpool & Wolverine", "year": 2024 },
+      { "series": "imdb:tt15571732", "title": "Agatha All Along", "year": 2024 },
+      { "movie": "imdb:tt14513804", "title": "Captain America: Brave New World", "year": 2025 },
+      { "series": "", "title": "Daredevil: Born Again", "year": 2025, "to": "S01" },
+      { "movie": "imdb:tt20969586", "title": "Thunderbolts*", "year": 2025 },
+      { "series": "imdb:tt13623126", "title": "Ironheart", "year": 2025 }
+    ]
+  },
+  {
+    "id": "mcu-phase-6",
+    "name": "MCU – Phase 6",
+    "sortName": "MCU Phase 6",
+    "description": "ab 2025: The Fantastic Four: First Steps, Spider-Man: Brand New Day, Avengers: Doomsday …",
+    "entries": [
+      { "movie": "imdb:tt10676052", "title": "The Fantastic Four: First Steps", "year": 2025 },
+      { "series": "", "title": "Wonder Man", "year": 2026 },
+      { "series": "", "title": "Daredevil: Born Again", "year": 2025, "from": "S02" },
+      { "movie": "", "title": "Spider-Man: Brand New Day", "year": 2026 },
+      { "movie": "", "title": "Avengers: Doomsday", "year": 2026 }
+    ]
+  }
+]

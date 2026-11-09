@@ -1,0 +1,15 @@
+{
+  "category": "General",
+  "changelog": "Erste Version",
+  "description": "Franchise-Sammlungen (z. B. MCU mit Phasen, Marvel, Star Trek, Akte X) mit Filmen und Serien sowie Watch-Order-Playlists.",
+  "guid": "4aa153a4-4b69-49df-b058-81da9a1685b2",
+  "name": "Franchise Collections",
+  "overview": "Große, verschachtelte Sammlungen und Watch-Order-Playlists",
+  "owner": "unheim",
+  "targetAbi": "__ABI__",
+  "timestamp": "2026-11-09T00:00:00.0000000Z",
+  "version": "__VERSION__",
+  "status": "Active",
+  "autoUpdate": false,
+  "assemblies": []
+}

@@ -1,0 +1,58 @@
+// "Marvel" als große Dach-Sammlung: MCU + X-Men + Spider-Man-Reihen + Marvel-Serien außerhalb des MCU
+// TMDb-Collections werden automatisch erkannt (Jellyfin speichert sie an jedem Film).
+[
+  {
+    "id": "marvel",
+    "name": "Marvel",
+    "sortName": "Marvel",
+    "description": "Dach-Sammlung: MCU, X-Men, Spider-Man (Sony), Marvel-Serien (Netflix/ABC).",
+    "overview": "Alles von Marvel – das MCU mit allen Phasen, die X-Men-Filme, die Spider-Man-Reihen und die Netflix-/ABC-Serien.",
+    "displayOrder": "SortName",
+    "entries": [
+      { "collection": "mcu" },
+      { "collection": "marvel-x-men" },
+      { "collection": "marvel-spider-man" },
+      { "collection": "marvel-tv" }
+    ]
+  },
+  {
+    "id": "marvel-x-men",
+    "name": "Marvel – X-Men & Deadpool",
+    "sortName": "Marvel X-Men",
+    "description": "X-Men-, Wolverine- und Deadpool-Filme (Fox)",
+    "entries": [
+      { "tmdbCollection": "748", "title": "X-Men-Reihe" },
+      { "tmdbCollection": "453993", "title": "Wolverine-Reihe" },
+      { "tmdbCollection": "448150", "title": "Deadpool-Reihe" },
+      { "movie": "imdb:tt4682266", "title": "The New Mutants", "year": 2020 }
+    ]
+  },
+  {
+    "id": "marvel-spider-man",
+    "name": "Marvel – Spider-Man (Sony)",
+    "sortName": "Marvel Spider-Man",
+    "description": "Raimi-Trilogie, The Amazing Spider-Man, Spider-Verse, Venom",
+    "entries": [
+      { "tmdbCollection": "556", "title": "Spider-Man-Trilogie (Raimi)" },
+      { "tmdbCollection": "125574", "title": "The Amazing Spider-Man-Reihe" },
+      { "tmdbCollection": "573436", "title": "Spider-Verse-Reihe" },
+      { "tmdbCollection": "558216", "title": "Venom-Reihe" }
+    ]
+  },
+  {
+    "id": "marvel-tv",
+    "name": "Marvel – Serien (Netflix & ABC)",
+    "sortName": "Marvel Serien",
+    "description": "Agents of S.H.I.E.L.D., Agent Carter, Daredevil, Jessica Jones, Luke Cage, Iron Fist, The Defenders, The Punisher",
+    "entries": [
+      { "series": "imdb:tt2364582", "title": "Marvel's Agents of S.H.I.E.L.D.", "year": 2013 },
+      { "series": "imdb:tt3475734", "title": "Marvel's Agent Carter", "year": 2015 },
+      { "series": "imdb:tt3322312", "title": "Marvel's Daredevil", "year": 2015 },
+      { "series": "imdb:tt2357547", "title": "Marvel's Jessica Jones", "year": 2015 },
+      { "series": "imdb:tt3322314", "title": "Marvel's Luke Cage", "year": 2016 },
+      { "series": "imdb:tt3322310", "title": "Marvel's Iron Fist", "year": 2017 },
+      { "series": "imdb:tt4230076", "title": "Marvel's The Defenders", "year": 2017 },
+      { "series": "imdb:tt5675620", "title": "Marvel's The Punisher", "year": 2017 }
+    ]
+  }
+]

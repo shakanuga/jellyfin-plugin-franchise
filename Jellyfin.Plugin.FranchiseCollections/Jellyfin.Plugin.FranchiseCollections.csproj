@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Jellyfin 10.11 läuft auf .NET 9. Für Jellyfin 10.10: net8.0 + JellyfinVersion 10.10.* -->
+    <TargetFramework>net9.0</TargetFramework>
+    <JellyfinVersion Condition="'$(JellyfinVersion)' == ''">10.11.*</JellyfinVersion>
+    <RootNamespace>Jellyfin.Plugin.FranchiseCollections</RootNamespace>
+    <AssemblyName>Jellyfin.Plugin.FranchiseCollections</AssemblyName>
+    <AssemblyVersion>0.1.0.0</AssemblyVersion>
+    <FileVersion>0.1.0.0</FileVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Nur zum Kompilieren; Jellyfin bringt diese DLLs zur Laufzeit selbst mit -->
+    <PackageReference Include="Jellyfin.Controller" Version="$(JellyfinVersion)">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+    <PackageReference Include="Jellyfin.Model" Version="$(JellyfinVersion)">
+      <ExcludeAssets>runtime</ExcludeAssets>
+    </PackageReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Remove="Configuration\configPage.html" />
+    <EmbeddedResource Include="Configuration\configPage.html" />
+    <EmbeddedResource Include="Definitions\*.json" />
+  </ItemGroup>
+
+</Project>

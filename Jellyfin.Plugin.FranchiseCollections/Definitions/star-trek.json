@@ -1,0 +1,56 @@
+// Star Trek – alle Serien und Filme, Playlist in Erscheinungsreihenfolge mit den Filmen an der passenden Stelle.
+// Parallel gelaufene Serien (z. B. DS9 und Voyager) sind staffelweise abwechselnd einsortiert.
+{
+  "id": "star-trek",
+  "name": "Star Trek",
+  "description": "Alle Serien + Filme. Playlist: TOS → Filme I–V → TNG (mit VI vor „Wiedervereinigung“) → DS9/VOY abwechselnd mit den TNG-Filmen → ENT → Kelvin → neue Serien.",
+  "overview": "Das komplette Star-Trek-Universum. Die Playlist „Star Trek – Reihenfolge“ zeigt, wann welcher Film zwischen den Staffeln kommt.",
+  "playlist": true,
+  "displayOrder": "PremiereDate",
+  "entries": [
+    { "series": "imdb:tt0060028", "title": "Star Trek", "year": 1966 },
+    { "series": "imdb:tt0069637", "title": "Star Trek: The Animated Series", "year": 1973 },
+    { "movie": "imdb:tt0079945", "title": "Star Trek: The Motion Picture", "year": 1979 },
+    { "movie": "imdb:tt0084726", "title": "Star Trek II: The Wrath of Khan", "year": 1982 },
+    { "movie": "imdb:tt0088170", "title": "Star Trek III: The Search for Spock", "year": 1984 },
+    { "movie": "imdb:tt0092007", "title": "Star Trek IV: The Voyage Home", "year": 1986 },
+    { "movie": "imdb:tt0098382", "title": "Star Trek V: The Final Frontier", "year": 1989 },
+
+    { "series": "imdb:tt0092455", "title": "Star Trek: The Next Generation", "year": 1987, "to": "S05E06" },
+    { "movie": "imdb:tt0102975", "title": "Star Trek VI: The Undiscovered Country", "year": 1991, "note": "vor TNG 5x07 „Wiedervereinigung I“" },
+    { "series": "imdb:tt0092455", "title": "Star Trek: The Next Generation", "year": 1987, "from": "S05E07", "to": "S06" },
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "to": "S01" },
+    { "series": "imdb:tt0092455", "title": "Star Trek: The Next Generation", "year": 1987, "from": "S07" },
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S02", "to": "S02" },
+    { "movie": "imdb:tt0111280", "title": "Star Trek Generations", "year": 1994 },
+
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S03", "to": "S03" },
+    { "series": "imdb:tt0112178", "title": "Star Trek: Voyager", "year": 1995, "to": "S01" },
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S04", "to": "S04" },
+    { "series": "imdb:tt0112178", "title": "Star Trek: Voyager", "year": 1995, "from": "S02", "to": "S02" },
+    { "movie": "imdb:tt0117731", "title": "Star Trek: First Contact", "year": 1996 },
+
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S05", "to": "S05" },
+    { "series": "imdb:tt0112178", "title": "Star Trek: Voyager", "year": 1995, "from": "S03", "to": "S03" },
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S06", "to": "S06" },
+    { "series": "imdb:tt0112178", "title": "Star Trek: Voyager", "year": 1995, "from": "S04", "to": "S04" },
+    { "movie": "imdb:tt0120844", "title": "Star Trek: Insurrection", "year": 1998 },
+
+    { "series": "imdb:tt0106145", "title": "Star Trek: Deep Space Nine", "year": 1993, "from": "S07" },
+    { "series": "imdb:tt0112178", "title": "Star Trek: Voyager", "year": 1995, "from": "S05" },
+    { "movie": "imdb:tt0253754", "title": "Star Trek: Nemesis", "year": 2002 },
+    { "series": "imdb:tt0244365", "title": "Star Trek: Enterprise", "year": 2001 },
+
+    { "movie": "imdb:tt0796366", "title": "Star Trek", "year": 2009 },
+    { "movie": "imdb:tt1408101", "title": "Star Trek Into Darkness", "year": 2013 },
+    { "movie": "imdb:tt2660888", "title": "Star Trek Beyond", "year": 2016 },
+
+    { "series": "imdb:tt5171438", "title": "Star Trek: Discovery", "year": 2017 },
+    { "series": "imdb:tt8806524", "title": "Star Trek: Picard", "year": 2020 },
+    { "series": "imdb:tt9184820", "title": "Star Trek: Lower Decks", "year": 2020 },
+    { "series": "imdb:tt9795876", "title": "Star Trek: Prodigy", "year": 2021 },
+    { "series": "imdb:tt12327578", "title": "Star Trek: Strange New Worlds", "year": 2022 },
+    { "movie": "", "title": "Star Trek: Section 31", "year": 2025 },
+    { "series": "", "title": "Star Trek: Starfleet Academy", "year": 2026 }
+  ]
+}

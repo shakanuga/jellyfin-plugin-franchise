@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <title>Franchise Collections</title>
+</head>
+<body>
+<div id="FranchiseCollectionsConfigPage" data-role="page" class="page type-interior pluginConfigurationPage" data-require="emby-input,emby-button,emby-select,emby-checkbox">
+    <div data-role="content">
+        <div class="content-primary">
+            <style>
+                #FranchiseCollectionsConfigPage .fc-section { margin: 2em 0 1em; }
+                #FranchiseCollectionsConfigPage .fc-builtin { padding: .4em 0; border-bottom: 1px solid rgba(128,128,128,.2); }
+                #FranchiseCollectionsConfigPage .fc-builtin .fc-desc { opacity: .7; font-size: .9em; margin: .1em 0 0 2.6em; }
+                #FranchiseCollectionsConfigPage .fc-builtin .fc-via { color: #00a4dc; font-size: .85em; margin-left: 2.6em; }
+                #FranchiseCollectionsConfigPage textarea.fc-json { width: 100%; min-height: 22em; font-family: monospace; font-size: .85em;
+                    background: rgba(0,0,0,.25); color: inherit; border: 1px solid rgba(128,128,128,.4); border-radius: .3em; padding: .6em; box-sizing: border-box; }
+                #FranchiseCollectionsConfigPage .fc-error { color: #ff6b6b; margin: .5em 0; white-space: pre-wrap; }
+                #FranchiseCollectionsConfigPage .fc-report details { margin: .3em 0; padding: .4em .6em; background: rgba(128,128,128,.08); border-radius: .3em; }
+                #FranchiseCollectionsConfigPage .fc-report summary { cursor: pointer; }
+                #FranchiseCollectionsConfigPage .fc-ok { color: #52b54b; }
+                #FranchiseCollectionsConfigPage .fc-warn { color: #e6a23c; }
+                #FranchiseCollectionsConfigPage .fc-report ul { margin: .3em 0 .3em 1em; padding-left: 1em; }
+                #FranchiseCollectionsConfigPage code { background: rgba(128,128,128,.2); padding: 0 .3em; border-radius: .2em; }
+            </style>
+
+            <form id="FranchiseCollectionsConfigForm">
+                <div class="verticalSection">
+                    <h2 class="sectionTitle">Franchise Collections</h2>
+                    <p>Legt große Sammlungen mit Filmen <em>und</em> Serien an (z. B. MCU mit allen Phasen) und optional eine
+                        Playlist in der richtigen Reihenfolge – damit man weiß, wann der Film zur Serie dran ist.</p>
+                    <button is="emby-button" type="button" id="fcRunNow" class="raised button-submit block emby-button">
+                        <span>Jetzt synchronisieren</span>
+                    </button>
+                    <div id="fcRunStatus" style="margin-top:.5em; opacity:.8;"></div>
+                </div>
+
+                <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Letzter Lauf</h3>
+                    <div id="fcReport" class="fc-report">Noch kein Lauf.</div>
+                </div>
+
+                <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Mitgelieferte Sammlungen</h3>
+                    <p style="opacity:.7">Unter-Sammlungen (z. B. die MCU-Phasen) werden automatisch mit angelegt, wenn die übergeordnete Sammlung aktiv ist.</p>
+                    <div id="fcBuiltIns"></div>
+                </div>
+
+                <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Einstellungen</h3>
+
+                    <div class="selectContainer">
+                        <select is="emby-select" id="fcPlaylistOwner" label="Besitzer der Watch-Order-Playlists"></select>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="fcPlaylistsPublic" />
+                            <span>Playlists für alle Benutzer sichtbar</span>
+                        </label>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="fcSyncAfterScan" />
+                            <span>Nach jedem Bibliotheks-Scan automatisch synchronisieren</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Neue Filme/Folgen landen dann von selbst in den richtigen Sammlungen.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="fcMatchByTitle" />
+                            <span>Titel + Jahr als Rückfallebene verwenden</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Wenn keine IMDb/TMDb/TVDB-ID passt, wird über Originaltitel und Erscheinungsjahr (±1) gesucht.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
+                            <input is="emby-checkbox" type="checkbox" id="fcCreateEmpty" />
+                            <span>Auch leere Sammlungen anlegen</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Normalerweise wird eine Sammlung erst angelegt, wenn mindestens ein Titel davon in der Bibliothek ist.</div>
+                    </div>
+                </div>
+
+                <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Eigene Sammlungen (JSON)</h3>
+                    <p style="opacity:.8">
+                        Ein Objekt oder ein Array von Definitionen. Gleiche <code>id</code> wie eine mitgelieferte Sammlung = überschreibt sie.
+                        Alternativ kannst du <code>*.json</code>-Dateien in <code id="fcFolderHint">config/plugins/configurations/FranchiseCollections/</code> legen.
+                        Bilder: <code>&lt;id&gt;-poster.jpg</code> und <code>&lt;id&gt;-backdrop.jpg</code> in denselben Ordner.
+                    </p>
+                    <textarea id="fcCustomJson" class="fc-json" spellcheck="false"></textarea>
+                    <div id="fcJsonError" class="fc-error"></div>
+                    <button is="emby-button" type="button" id="fcInsertExample" class="raised emby-button"><span>Beispiel einfügen</span></button>
+                </div>
+
+                <div>
+                    <button is="emby-button" type="submit" class="raised button-submit block emby-button">
+                        <span>Speichern</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        (function () {
+            var pluginId = '4aa153a4-4b69-49df-b058-81da9a1685b2';
+            var taskKey = 'FranchiseCollectionsSync';
+            var page = document.querySelector('#FranchiseCollectionsConfigPage');
+            var currentConfig = null;
+
+            var example = JSON.stringify([{
+                id: 'batman',
+                name: 'Batman',
+                overview: 'Alle Batman-Filme und -Serien.',
+                playlist: true,
+                entries: [
+                    { tmdbCollection: '263', title: 'The Dark Knight Trilogie' },
+                    { movie: 'imdb:tt1877830', title: 'The Batman', year: 2022 },
+                    { series: '', title: 'The Penguin', year: 2024 }
+                ]
+            }], null, 2);
+
+            function esc(s) {
+                return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+                    return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+                });
+            }
+
+            function renderBuiltIns(config) {
+                var enabled = (config.EnabledBuiltIns || []).map(function (x) { return x.toLowerCase(); });
+                var catalog = config.BuiltInCatalog || [];
+                var byId = {};
+                catalog.forEach(function (b) { byId[b.Id.toLowerCase()] = b; });
+
+                function activeVia(b, seen) {
+                    seen = seen || {};
+                    var parents = b.IncludedBy || [];
+                    for (var i = 0; i < parents.length; i++) {
+                        var p = parents[i].toLowerCase();
+                        if (seen[p]) continue;
+                        seen[p] = true;
+                        if (enabled.indexOf(p) >= 0) return byId[p] ? byId[p].Name : p;
+                        if (byId[p]) { var up = activeVia(byId[p], seen); if (up) return up; }
+                    }
+                    return null;
+                }
+
+                var html = catalog.map(function (b) {
+                    var checked = enabled.indexOf(b.Id.toLowerCase()) >= 0 ? ' checked' : '';
+                    var via = activeVia(b);
+                    return '<div class="fc-builtin">' +
+                        '<label class="checkboxContainer" style="margin:0"><input is="emby-checkbox" type="checkbox" class="fcBuiltIn" data-id="' + esc(b.Id) + '"' + checked + ' />' +
+                        '<span>' + esc(b.Name) + '</span></label>' +
+                        (b.Description ? '<div class="fc-desc">' + esc(b.Description) + '</div>' : '') +
+                        (via ? '<div class="fc-via">aktiv über „' + esc(via) + '“</div>' : '') +
+                        '</div>';
+                }).join('');
+                page.querySelector('#fcBuiltIns').innerHTML = html || '<p>Keine mitgelieferten Definitionen gefunden.</p>';
+            }
+
+            function renderReport(config) {
+                var el = page.querySelector('#fcReport');
+                if (!config.LastReportJson) { el.innerHTML = 'Noch kein Lauf.'; return; }
+                var r;
+                try { r = JSON.parse(config.LastReportJson); } catch (e) { el.textContent = 'Bericht nicht lesbar.'; return; }
+
+                var when = new Date(r.StartedUtc).toLocaleString();
+                var html = '<p>' + esc(when) + ' · ' + esc(r.DurationSeconds) + ' s</p>';
+                (r.Errors || []).forEach(function (e) { html += '<div class="fc-error">' + esc(e) + '</div>'; });
+
+                (r.Definitions || []).forEach(function (d) {
+                    var complete = d.EntriesTotal > 0 && d.EntriesFound === d.EntriesTotal && !d.Error;
+                    var cls = d.Error ? 'fc-error' : (complete ? 'fc-ok' : (d.EntriesFound > 0 ? 'fc-warn' : ''));
+                    var summary = '<span class="' + cls + '">' + (d.Error ? '✗' : (complete ? '✓' : '◐')) + '</span> <b>' + esc(d.Name) + '</b> – ' +
+                        esc(d.EntriesFound) + '/' + esc(d.EntriesTotal) + ' vorhanden';
+                    if (d.CollectionItems) summary += ' · Sammlung: ' + esc(d.CollectionItems);
+                    if (d.PlaylistItems) summary += ' · Playlist: ' + esc(d.PlaylistItems);
+                    var body = '';
+                    if (d.Error) body += '<div class="fc-error">' + esc(d.Error) + '</div>';
+                    if (d.Missing && d.Missing.length) {
+                        body += '<div>Fehlt in der Bibliothek:</div><ul>' + d.Missing.map(function (m) { return '<li>' + esc(m) + '</li>'; }).join('') + '</ul>';
+                    }
+                    html += body ? '<details><summary>' + summary + '</summary>' + body + '</details>' : '<details><summary>' + summary + '</summary></details>';
+                });
+                el.innerHTML = html;
+            }
+
+            function loadUsers(config) {
+                return ApiClient.getUsers().then(function (users) {
+                    var select = page.querySelector('#fcPlaylistOwner');
+                    select.innerHTML = '<option value="">(erster Benutzer)</option>' + users.map(function (u) {
+                        return '<option value="' + esc(u.Id) + '">' + esc(u.Name) + '</option>';
+                    }).join('');
+                    select.value = (config.PlaylistOwnerUserId || '').replace(/-/g, '');
+                    if (select.value === '' && config.PlaylistOwnerUserId) {
+                        // IDs können mit oder ohne Bindestriche kommen
+                        Array.prototype.forEach.call(select.options, function (o) {
+                            if (o.value.replace(/-/g, '').toLowerCase() === config.PlaylistOwnerUserId.replace(/-/g, '').toLowerCase()) select.value = o.value;
+                        });
+                    }
+                });
+            }
+
+            function load() {
+                Dashboard.showLoadingMsg();
+                ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                    currentConfig = config;
+                    page.querySelector('#fcPlaylistsPublic').checked = !!config.PlaylistsPublic;
+                    page.querySelector('#fcSyncAfterScan').checked = !!config.SyncAfterLibraryScan;
+                    page.querySelector('#fcMatchByTitle').checked = !!config.MatchByTitleAndYear;
+                    page.querySelector('#fcCreateEmpty').checked = !!config.CreateEmptyCollections;
+                    page.querySelector('#fcCustomJson').value = config.CustomDefinitionsJson || '';
+                    page.querySelector('#fcJsonError').textContent = '';
+                    renderBuiltIns(config);
+                    renderReport(config);
+                    return loadUsers(config);
+                }).finally(function () { Dashboard.hideLoadingMsg(); });
+            }
+
+            function validateJson() {
+                var text = page.querySelector('#fcCustomJson').value.trim();
+                var errEl = page.querySelector('#fcJsonError');
+                errEl.textContent = '';
+                if (!text) return true;
+                try {
+                    // Kommentare wie im Plugin erlauben
+                    var parsed = JSON.parse(text.replace(/^\s*\/\/.*$/gm, ''));
+                    var list = Array.isArray(parsed) ? parsed : (parsed.definitions || [parsed]);
+                    var problems = [];
+                    list.forEach(function (d, i) {
+                        if (!d.id) problems.push('Definition ' + (i + 1) + ': "id" fehlt');
+                        if (!d.name) problems.push('Definition ' + (d.id || i + 1) + ': "name" fehlt');
+                        if (!Array.isArray(d.entries)) problems.push('Definition ' + (d.id || i + 1) + ': "entries" muss ein Array sein');
+                    });
+                    if (problems.length) { errEl.textContent = problems.join('\n'); return false; }
+                    return true;
+                } catch (e) {
+                    errEl.textContent = 'JSON-Fehler: ' + e.message;
+                    return false;
+                }
+            }
+
+            function collectConfig(config) {
+                config.PlaylistsPublic = page.querySelector('#fcPlaylistsPublic').checked;
+                config.SyncAfterLibraryScan = page.querySelector('#fcSyncAfterScan').checked;
+                config.MatchByTitleAndYear = page.querySelector('#fcMatchByTitle').checked;
+                config.CreateEmptyCollections = page.querySelector('#fcCreateEmpty').checked;
+                config.PlaylistOwnerUserId = page.querySelector('#fcPlaylistOwner').value || '';
+                config.CustomDefinitionsJson = page.querySelector('#fcCustomJson').value;
+                config.EnabledBuiltIns = Array.prototype.map.call(
+                    page.querySelectorAll('.fcBuiltIn:checked'), function (c) { return c.getAttribute('data-id'); });
+                config.BuiltInsInitialized = true;
+                return config;
+            }
+
+            function save() {
+                if (!validateJson()) return Promise.reject(new Error('json'));
+                Dashboard.showLoadingMsg();
+                return ApiClient.getPluginConfiguration(pluginId).then(function (fresh) {
+                    // frisch laden, damit der Bericht vom letzten Lauf nicht überschrieben wird
+                    return ApiClient.updatePluginConfiguration(pluginId, collectConfig(fresh));
+                }).then(function (result) {
+                    Dashboard.processPluginConfigurationUpdateResult(result);
+                    return ApiClient.getPluginConfiguration(pluginId);
+                }).then(function (config) {
+                    currentConfig = config;
+                    renderBuiltIns(config);
+                });
+            }
+
+            function findTask() {
+                return ApiClient.getScheduledTasks({ isHidden: false }).then(function (tasks) {
+                    return tasks.filter(function (t) { return t.Key === taskKey; })[0];
+                });
+            }
+
+            function pollTask(taskId) {
+                var status = page.querySelector('#fcRunStatus');
+                ApiClient.getScheduledTask(taskId).then(function (t) {
+                    if (t.State === 'Running') {
+                        status.textContent = 'Läuft … ' + Math.round(t.CurrentProgressPercentage || 0) + ' %';
+                        setTimeout(function () { pollTask(taskId); }, 1500);
+                    } else {
+                        status.textContent = 'Fertig.';
+                        ApiClient.getPluginConfiguration(pluginId).then(function (config) {
+                            currentConfig = config;
+                            renderReport(config);
+                        });
+                    }
+                });
+            }
+
+            page.addEventListener('pageshow', load);
+
+            page.querySelector('#FranchiseCollectionsConfigForm').addEventListener('submit', function (e) {
+                e.preventDefault();
+                save().catch(function () { Dashboard.hideLoadingMsg(); });
+                return false;
+            });
+
+            page.querySelector('#fcCustomJson').addEventListener('blur', validateJson);
+
+            page.querySelector('#fcInsertExample').addEventListener('click', function () {
+                var ta = page.querySelector('#fcCustomJson');
+                if (ta.value.trim() && !confirm('Vorhandenen Inhalt ersetzen?')) return;
+                ta.value = example;
+                validateJson();
+            });
+
+            page.querySelector('#fcBuiltIns').addEventListener('change', function () {
+                if (!currentConfig) return;
+                currentConfig.EnabledBuiltIns = Array.prototype.map.call(
+                    page.querySelectorAll('.fcBuiltIn:checked'), function (c) { return c.getAttribute('data-id'); });
+                renderBuiltIns(currentConfig);
+            });
+
+            page.querySelector('#fcRunNow').addEventListener('click', function () {
+                var status = page.querySelector('#fcRunStatus');
+                save().then(findTask).then(function (task) {
+                    if (!task) { status.textContent = 'Geplante Aufgabe nicht gefunden.'; return; }
+                    status.textContent = 'Gestartet …';
+                    return ApiClient.startScheduledTask(task.Id).then(function () {
+                        setTimeout(function () { pollTask(task.Id); }, 1000);
+                    });
+                }).catch(function () { Dashboard.hideLoadingMsg(); });
+            });
+        })();
+    </script>
+</div>
+</body>
+</html>
