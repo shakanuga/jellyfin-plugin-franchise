@@ -36,6 +36,15 @@
                 </div>
 
                 <div class="verticalSection fc-section">
+                    <h3 class="sectionTitle">Franchise-Seite</h3>
+                    <p style="opacity:.85">Eine Übersicht aller Franchises mit Fortschritt und Reihenfolgen.
+                        <a id="fcPageLink" href="#" target="_blank" style="color:#00a4dc">Seite öffnen ↗</a></p>
+                    <p style="opacity:.8">Als Reiter in Jellyfin: im Plugin <b>Custom Tabs</b> einen neuen Tab „Franchises“ anlegen und als Inhalt einfügen:</p>
+                    <textarea id="fcIframe" class="fc-json" style="min-height:4.5em" readonly></textarea>
+                    <button is="emby-button" type="button" id="fcCopyIframe" class="raised emby-button"><span>Kopieren</span></button>
+                </div>
+
+                <div class="verticalSection fc-section">
                     <h3 class="sectionTitle">Letzter Lauf</h3>
                     <div id="fcReport" class="fc-report">Noch kein Lauf.</div>
                 </div>
@@ -57,10 +66,18 @@
 
                     <div class="checkboxContainer checkboxContainer-withDescription">
                         <label>
+                            <input is="emby-checkbox" type="checkbox" id="fcGenerateArtwork" />
+                            <span>Eigene Poster und Vorschaubilder erzeugen</span>
+                        </label>
+                        <div class="fieldDescription checkboxFieldDescription">Statt der Jellyfin-Collage: Hintergrundbild eines passenden Titels mit Name und Jahren. Eigene Bilder (Datei/URL) haben Vorrang.</div>
+                    </div>
+
+                    <div class="checkboxContainer checkboxContainer-withDescription">
+                        <label>
                             <input is="emby-checkbox" type="checkbox" id="fcRemoveWatched" />
                             <span>Gesehenes aus den Playlists entfernen</span>
                         </label>
-                        <div class="fieldDescription checkboxFieldDescription">Oben steht dann immer das Nächste – einfach Playlist abspielen und weiterschauen. Als ungesehen markieren bringt es zurück.</div>
+                        <div class="fieldDescription checkboxFieldDescription">Standardmäßig aus – Gesehenes bekommt nur einen Haken. An: oben steht immer das Nächste, als ungesehen markieren bringt es zurück.</div>
                     </div>
 
                     <div class="checkboxContainer checkboxContainer-withDescription">
@@ -219,6 +236,11 @@
                 ApiClient.getPluginConfiguration(pluginId).then(function (config) {
                     currentConfig = config;
                     page.querySelector('#fcRemoveWatched').checked = !!config.RemoveWatchedFromPlaylists;
+                    page.querySelector('#fcGenerateArtwork').checked = config.GenerateArtwork !== false;
+                    var pageUrl = ApiClient.getUrl('FranchiseCollections/Page');
+                    page.querySelector('#fcPageLink').href = pageUrl;
+                    page.querySelector('#fcIframe').value = '<iframe src="' + pageUrl.replace(/^https?:\/\/[^/]+/, '') +
+                        '" style="width:100%;height:calc(100vh - 120px);border:0;display:block"></iframe>';
                     page.querySelector('#fcAliases').value = config.SeriesAliases || '';
                     page.querySelector('#fcSyncAfterScan').checked = !!config.SyncAfterLibraryScan;
                     page.querySelector('#fcMatchByTitle').checked = !!config.MatchByTitleAndYear;
@@ -256,6 +278,7 @@
 
             function collectConfig(config) {
                 config.RemoveWatchedFromPlaylists = page.querySelector('#fcRemoveWatched').checked;
+                config.GenerateArtwork = page.querySelector('#fcGenerateArtwork').checked;
                 config.SeriesAliases = page.querySelector('#fcAliases').value;
                 config.PlaylistUserIds = Array.prototype.map.call(
                     page.querySelectorAll('.fcUser:checked'), function (c) { return c.getAttribute('data-id'); });
@@ -307,6 +330,13 @@
             }
 
             page.addEventListener('pageshow', load);
+
+            page.querySelector('#fcCopyIframe').addEventListener('click', function () {
+                var ta = page.querySelector('#fcIframe');
+                ta.select();
+                try { navigator.clipboard.writeText(ta.value); } catch (e) { document.execCommand('copy'); }
+                Dashboard.alert('Kopiert – jetzt in Custom Tabs als Inhalt eines neuen Tabs einfügen.');
+            });
 
             page.querySelector('#FranchiseCollectionsConfigForm').addEventListener('submit', function (e) {
                 e.preventDefault();
