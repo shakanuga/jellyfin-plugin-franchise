@@ -820,6 +820,37 @@ public class FranchiseSyncService
             changed = true;
         }
 
+        // Fremde TMDb-Zuordnung entfernen (Jellyfin ordnet z. B. "Marvel" gern der "Captain Marvel Collection" zu
+        // und holt deren Logo) – samt dem Logo, das dabei geholt wurde.
+        if (string.IsNullOrWhiteSpace(def.TmdbCollectionId) && boxSet.ProviderIds.Remove("Tmdb"))
+        {
+            var logos = boxSet.GetImages(ImageType.Logo).ToList();
+            if (logos.Count > 0)
+            {
+                boxSet.RemoveImages(logos);
+                foreach (var logo in logos.Where(l => l.IsLocalFile && !string.IsNullOrEmpty(boxSet.Path)
+                                                     && l.Path.StartsWith(boxSet.Path, StringComparison.Ordinal)))
+                {
+                    try
+                    {
+                        File.Delete(logo.Path);
+                    }
+                    catch (IOException)
+                    {
+                    }
+                }
+            }
+
+            changed = true;
+        }
+
+        // Metadaten sperren: Jellyfin soll diese Sammlung nicht mehr mit TMDb abgleichen (Bilder setzt das Plugin)
+        if (!boxSet.IsLocked)
+        {
+            boxSet.IsLocked = true;
+            changed = true;
+        }
+
         // Name und Beschreibung sperren, damit ein Metadaten-Refresh sie nicht überschreibt
         var locked = boxSet.LockedFields ?? Array.Empty<MetadataField>();
         var wantLocked = new[] { MetadataField.Name, MetadataField.Overview };

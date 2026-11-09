@@ -1,5 +1,9 @@
 # Änderungen
 
+## 0.3.1
+
+- Sammlungen werden gesperrt, damit Jellyfin sie nicht falschen TMDb-Sammlungen zuordnet (z. B. „Marvel“ → „Captain Marvel Collection“ mit deren Logo); eine solche Zuordnung samt Logo wird entfernt
+
 ## 0.3.0
 
 - Neue Franchise-Seite: alle Franchises mit Fortschritt, Unter-Sammlungen und umschaltbaren Reihenfolgen (Erscheinen/Chronologisch), „Als Nächstes“ und „Weiterschauen“ – ein Klick öffnet die normale Jellyfin-Seite. Einbinden über Custom Tabs (Code in den Plugin-Einstellungen)
