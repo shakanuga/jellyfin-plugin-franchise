@@ -23,7 +23,7 @@ jobs:
             sdk: "9.0.x"
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ matrix.sdk }}
       - name: Build
