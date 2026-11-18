@@ -4,6 +4,9 @@ Legt große, verschachtelte Sammlungen mit **Filmen und Serien** an (z. B. *Marv
 und **Watch-Order-Playlists**, in denen Filme genau zwischen den richtigen Staffeln/Folgen stehen
 (z. B. *Akte X: Staffel 1–5 → Der Film → Staffel 6–9 …*).
 
+![Franchise-Seite des Plugins mit der MCU-Sammlung](docs/screenshots/mcu-phasen.png)
+
+
 Alles sind ganz normale Jellyfin-Sammlungen und -Playlists – funktioniert also in **jeder** App
 (Browser, Wholphin, Android TV, Handy …), ohne Zusatz-Plugins oder eingeschleustes JavaScript.
 
@@ -15,6 +18,17 @@ Mitgeliefert:
   sortieren sich von selbst ein, sobald sie dort und in deiner Bibliothek sind.
 - **Marvel-Multiversum – Chronologisch** (standardmäßig aus) – inkl. Fox, Sony, Netflix, Blade …
 - **Star Trek** (alle Serien + Filme) und **Akte X**
+
+## Screenshots
+
+Die Franchise-Seite des Plugins (`/FranchiseCollections/Page`, z. B. als eigener Tab über Custom Tabs):
+
+<table>
+<tr><td width="50%"><img src="docs/screenshots/franchises.png" alt="Alle Franchises mit Fortschritt"><br><sub>Alle Franchises mit Fortschritt</sub></td><td width="50%"><img src="docs/screenshots/marvel.png" alt="Marvel als Dach-Sammlung"><br><sub>Marvel als Dach-Sammlung</sub></td></tr>
+<tr><td width="50%"><img src="docs/screenshots/akte-x-reihenfolge.png" alt="Akte X: Reihenfolge mit den Filmen an der richtigen Stelle"><br><sub>Akte X: Reihenfolge mit den Filmen an der richtigen Stelle</sub></td><td width="50%"><img src="docs/screenshots/mcu-erscheinungsreihenfolge.png" alt="MCU in Erscheinungsreihenfolge, „Als Nächstes“ markiert"><br><sub>MCU in Erscheinungsreihenfolge, „Als Nächstes“ markiert</sub></td></tr>
+</table>
+
+<sub>Screenshots mit Demo-Daten und Platzhalter-Postern statt der echten Cover.</sub>
 
 ## Installieren (über den Katalog – mit Updates)
 
